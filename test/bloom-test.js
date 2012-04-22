@@ -1,7 +1,9 @@
+Bloom.import_all();
+
 Block.library['test_div'] = new Block('test_div', '<div></div>');
 Block.library['test_list'] = new Block('test_list', '<ul></ul>');
 
-var Test_Element = Element.sub_class('Test_Element', {
+var Test_Flower = Flower.sub_class('Test_Flower', {
   block: 'test_div'
 });
 
@@ -13,15 +15,15 @@ var Test_List = List.sub_class('Test_List', {
 
 $(function(){
      
-  test("Element.initialize", function() {    
-    var virtual_element = Element.create_without_initializing();
-    Element.properties.initialize.apply(virtual_element, ['<div></div>']);
-    ok(typeof virtual_element.element == 'object', "Element has element");
+  test("Flower.initialize", function() {    
+    var virtual_element = Flower.create_without_initializing();
+    Flower.properties.initialize.apply(virtual_element, ['<div></div>']);
+    ok(typeof virtual_element.element == 'object', "Flower has element");
 
   });
   
-  test("Element.render", function() {
-    var virtual_element = Element.create_without_initializing();
+  test("Flower.render", function() {
+    var virtual_element = Flower.create_without_initializing();
     virtual_element.block = 'test_div';
     virtual_element.render();
     ok(typeof virtual_element.element === 'object', "control has element");
@@ -32,35 +34,35 @@ $(function(){
       function_called = true;
     });
     
-    ok(function_called, "Element.render called the onload function that was passed to it");
+    ok(function_called, "Flower.render called the onload function that was passed to it");
   });
 
-  test("Element.create", function() {
+  test("Flower.create", function() {
     var control;
       
-    control = Test_Element.create();
-    ok(typeof control.element === 'object', "Test_Element has element");
+    control = Test_Flower.create();
+    ok(typeof control.element === 'object', "Test_Flower has element");
      
     var function_called = false;
-    control = Test_Element.create(function() {
+    control = Test_Flower.create(function() {
       function_called = true;
     });    
-    ok(typeof control.element === 'object', "Test_Element has element");
-    ok(function_called, "Element.render called the onload function that was passed to it");
+    ok(typeof control.element === 'object', "Test_Flower has element");
+    ok(function_called, "Flower.render called the onload function that was passed to it");
 
-    control = Element.create('<div></div>');    
-    ok(typeof control.element === 'object', "Element has element");
+    control = Flower.create('<div></div>');    
+    ok(typeof control.element === 'object', "Flower has element");
   });
   
   test("List.on_update", function() {   
-    var data = {
+    var seed = {
       nodes: []
     };
-    data.nodes.push(Test.create_node());
+    seed.nodes.push(Test.create_node());
     
     var function_called = false;
     Test_List.create(function(list){
-      list.on_update(data);
+      list.on_update(seed);
       ok(list.children.length > 0, 'list has children')
       ok(list.element.length > 0, 'list has element')
       function_called = true;
