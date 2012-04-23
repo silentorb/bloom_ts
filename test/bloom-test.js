@@ -9,9 +9,21 @@ var Test_Flower = Flower.sub_class('Test_Flower', {
 
 var Test_List = List.sub_class('Test_List', {
   block: 'test_list',
-  remote_list: 'nodes',
-  item_type: Meta_Object
+  item_type: Test_Flower,
+  seed_name: 'nodes'
 });
+
+var Test = {
+  create_node: function() {
+    var node = {
+      nid: 1,
+      title: 'Test Node',
+      uid: 1    
+    };      
+    MetaHub.metanize(node);
+    return node;
+  }
+};
 
 $(function(){
      
@@ -53,7 +65,7 @@ $(function(){
     control = Flower.create('<div></div>');    
     ok(typeof control.element === 'object', "Flower has element");
   });
-  
+    
   test("List.on_update", function() {   
     var seed = {
       nodes: []
@@ -62,7 +74,7 @@ $(function(){
     
     var function_called = false;
     Test_List.create(function(list){
-      list.on_update(seed);
+      list.on_update(seed.nodes);
       ok(list.children.length > 0, 'list has children')
       ok(list.element.length > 0, 'list has element')
       function_called = true;
@@ -70,4 +82,5 @@ $(function(){
 
     ok(function_called, "List.create called the onload function that was passed to it");  
   });
+  
 });
