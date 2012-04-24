@@ -1,5 +1,6 @@
 Bloom.import_all();
 
+Block.source_path = 'resources';
 Block.library['test_div'] = new Block('test_div', '<div></div>');
 Block.library['test_list'] = new Block('test_list', '<ul></ul>');
 
@@ -25,8 +26,21 @@ var Test = {
   }
 };
 
-$(function(){
-     
+function _Block() {
+
+  test("Block.load", function() {
+    equal(Block.library['div'], undefined, "div block is undefined.");
+    stop();
+    Block.load('div', function(block) {
+      ok(block.html.length > 0, "block.html has content.");
+      function_call = true;
+      start();
+    });   
+  });
+}
+
+function _Flower() {
+       
   test("Flower.initialize", function() {    
     var virtual_element = Flower.create_without_initializing();
     Flower.properties.initialize.apply(virtual_element, ['<div></div>']);
@@ -66,6 +80,9 @@ $(function(){
     ok(typeof control.element === 'object', "Flower has element");
   });
     
+}
+
+function _List() {  
   test("List.on_update", function() {   
     var seed = {
       nodes: []
@@ -82,5 +99,11 @@ $(function(){
 
     ok(function_called, "List.create called the onload function that was passed to it");  
   });
+}
+
+$(function(){
+  _Block();
+  _Flower();
+  _List();
   
 });
