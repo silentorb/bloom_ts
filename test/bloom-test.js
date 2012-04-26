@@ -45,9 +45,27 @@ function _Block() {
     stop();
     Block.load('div', function(block) {
       ok(block.html.length > 0, "block.html has content.");
-      function_call = true;
       start();
     });   
+  });
+  
+  test("Block.load_many", function() {
+    var names = [
+    'load_many1',
+    'load_many2',
+    'does_not_exist'
+    ];
+    var count = Object.size(Block.library);
+  
+    stop();
+    Block.load_many(names, function() {
+      equal(Object.size(Block.library), count + 2, 'Two blocks were added');
+      var sample = $(Block.library['load_many2'].html)
+      equal(sample.length, 1, 'html has one root element');
+      sample = sample.find('.lily');
+      equal(sample.length, 1, 'html was loaded properly');
+      start();
+    });
   });
 }
 
@@ -138,6 +156,7 @@ function _List() {
 }
 
 $(function(){
+  QUnit.config.testTimeout = 5000;
   _Block();
   _Flower();
   _List();
