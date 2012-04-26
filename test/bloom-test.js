@@ -5,7 +5,19 @@ Block.library['test_div'] = new Block('test_div', '<div></div>');
 Block.library['test_list'] = new Block('test_list', '<ul></ul>');
 
 var Test_Flower = Flower.sub_class('Test_Flower', {
-  block: 'test_div'
+  block: 'test_div',
+  data_process: function(object){ 
+    object.processed = true; 
+    return object;
+  }
+});
+
+var Bind_Flower = Flower.sub_class('Bind_Flower', {
+  block: 'bind',
+  flower_property: 'fp',
+  flower_function: function() {
+    return 'ff';
+  }
 });
 
 var Test_List = List.sub_class('Test_List', {
@@ -79,7 +91,28 @@ function _Flower() {
     control = Flower.create('<div></div>');    
     ok(typeof control.element === 'object', "Flower has element");
   });
+  
+  Block.load('bind', function() {
+    test("Flower.source_to_element", function() {
+      var flower = Bind_Flower.create_without_initializing();
+      flower.seed = {
+        seed_property: 'sp',
+        seed_function: function() {
+          return 'sf';
+        }
+      }
     
+      flower.render2();
+      equal(flower.element.length, 1, 'flower.element is not empty.');
+      flower.source_to_element();
+      var children = flower.element.children();
+      equal($(children[0]).text(), 'sp', 'Binding to seed property.');
+      equal($(children[1]).text(), 'sf', 'Binding to seed function.');
+      equal($(children[2]).text(), 'fp', 'Binding to flower property.');
+      equal($(children[3]).text(), 'ff', 'Binding to flower function.');
+    });
+  });
+
 }
 
 function _List() {  
@@ -92,10 +125,13 @@ function _List() {
     var function_called = false;
     Test_List.create(function(list){
       list.on_update(seed.nodes);
-      ok(list.children.length > 0, 'list has children')
-      ok(list.element.length > 0, 'list has element')
+      ok(list.children.length > 0, 'list has children');
+      ok(list.element.length > 0, 'list has element');  
+      equal(list.children[0].type, Test_Flower, "child type is Test_Flower");
+      equal(list.children[0].seed.processed, true, "data_processed was called");
       function_called = true;
     });
+
 
     ok(function_called, "List.create called the onload function that was passed to it");  
   });
