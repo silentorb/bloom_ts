@@ -49,6 +49,7 @@ function _Block() {
     });   
   });
   
+  /*
   test("Block.load_many", function() {
     var names = [
     'load_many1',
@@ -67,6 +68,7 @@ function _Block() {
       start();
     });
   });
+  */
 }
 
 function _Flower() {
@@ -143,10 +145,10 @@ function _List() {
     var function_called = false;
     Test_List.create(function(list){
       list.on_update(seed.nodes);
-      ok(list.children.length > 0, 'list has children');
+      ok(list.children().length > 0, 'list has children');
       ok(list.element.length > 0, 'list has element');  
-      equal(list.children[0].type, Test_Flower, "child type is Test_Flower");
-      equal(list.children[0].seed.processed, true, "data_processed was called");
+      equal(list.children()[0].type, Test_Flower, "child type is Test_Flower");
+      equal(list.children()[0].seed.processed, true, "data_processed was called");
       function_called = true;
     });
 
