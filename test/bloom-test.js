@@ -49,7 +49,7 @@ function _Block() {
     });   
   });
   
-  /*
+/*
   test("Block.load_many", function() {
     var names = [
     'load_many1',
@@ -68,7 +68,7 @@ function _Block() {
       start();
     });
   });
-  */
+   */
 }
 
 function _Flower() {
@@ -151,10 +151,23 @@ function _List() {
       equal(list.children()[0].seed.processed, true, "data_processed was called");
       function_called = true;
     });
-
-
+    
     ok(function_called, "List.create called the onload function that was passed to it");  
+
   });
+  
+  test("List - Meta_Object.change_parent", function() {         
+    var a = Test_List.create();
+    var b = Test_List.create();
+    var iris = Flower.create('<div>iris</div>');
+    a.connect(iris, 'child', 'parent');
+
+    Meta_Object.change_parent(iris, b, 'child');
+    
+    var b_children = b.element.find('li *');
+    equal(b_children.length, 1, "B's element has one child.");
+  });
+
 }
 
 $(function(){
