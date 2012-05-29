@@ -4,6 +4,18 @@ Block.source_path = 'resources';
 Block.library['test_div'] = new Block('test_div', '<div></div>');
 Block.library['test_list'] = new Block('test_list', '<ul></ul>');
 
+var fired = false;
+
+function fire() {
+  fired = true;
+}
+
+function test_fire(target, event) {
+  fired = false;
+  var object = Meta_Object.create();
+  object.listen(target, event, fire);
+}
+
 var Test_Flower = Flower.sub_class('Test_Flower', {
   block: 'test_div',
   data_process: function(object){ 
@@ -168,6 +180,27 @@ function _List() {
     equal(b_children.length, 1, "B's element has one child.");
   });
 
+  test("List - seed reflection", function() {
+    var seeds = Meta_Object.create();
+    var list = Test_List.create(seeds);
+    list.watch_seed();
+    var seed = Meta_Object.create();
+    seeds.connect(seed, 'child', 'parent');
+    equal(list.children().length, 1, "The list has one child");
+    equal(list.element.children().length, 1, "The list element has one child");
+    test_fire(seeds, 'disconnect.child');
+    var flower = seed.get_connection('flower');
+    seeds.disconnect(seed);
+    
+    ok(fired, "disconnect.child was fired");
+    equal(list.children().length, 0, "The list has no children");
+    equal(list.element.children().length, 0, "The list element has no children");
+    // In case that doesn't work, try directly removing it to see if remove_element is even getting called.
+    list.remove_element(flower);
+    
+    equal(list.element.children().length, 0, "The list element has no children");
+    equal(flower.element.parent().length, 0, "The item element has no parent");
+  });
 }
 
 $(function(){
