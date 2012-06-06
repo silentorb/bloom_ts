@@ -48,6 +48,15 @@ $(function(){
  
   });
   
+  test("MetaHub.connections - Change type name", function() {    
+    var first = Meta_Object.create();
+    var second = Meta_Object.create();
+    first.connect(second, 'first', 'second');
+    first.connect(second, 'a', 'b');
+    equal(first.connections[second].type, 'a', 'First connection was properly modified');
+    equal(second.connections[first].type, 'b', 'Second connection was properly modified');
+  });
+    
   test("Metal_Object.create", function() {
     var finished = false;
     var Test_Object = Meta_Object.sub_class('Test_Object', {
