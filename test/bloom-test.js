@@ -199,7 +199,24 @@ function _List() {
     list.remove_element(flower);
     
     equal(list.element.children().length, 0, "The list element has no children");
-    equal(flower.element.parent().length, 0, "The item element has no parent");
+    equal(flower.element, null, "The item element has no parent");
+  });
+  
+  test("List - Duplicates", function() {
+    var list = Test_List.create();
+    var a = Test_Flower.create();
+    list.connect(a, 'child', 'parent');
+    list.connect(a, 'child', 'parent');
+    equal(list.children().length, 1, 'List only has one child');
+    equal(list.element.children().length, 1, 'List element only has one child');
+    
+    var b = Test_Flower.create();
+    b.element = a.element;
+    list.connect(b, 'child', 'parent');
+
+    ok(list.contains_flower(a), 'Contains flower detected item a');
+    equal(list.children().length, 1, '(Added b) List only has one child');
+    equal(list.element.children().length, 1, '(Added b) List element only has one child');
   });
 }
 
