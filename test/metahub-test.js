@@ -69,7 +69,7 @@ $(function(){
     
     ok(fired, "disconnect.child was fired")
     equal(parent.get_connections('children').length, 0, 'Parent should have no more children');
-    equal(child.parent(), null, "child should have no parent"); 
+    equal(child.parent, null, "child should have no parent"); 
   });
   
   test("MetaHub.disconnect_all", function() {    

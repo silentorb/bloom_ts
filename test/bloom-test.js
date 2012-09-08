@@ -134,7 +134,7 @@ function _Flower() {
         }
       }
     
-      flower.render2();
+      flower.render();
       equal(flower.element.length, 1, 'flower.element is not empty.');
       flower.source_to_element();
       var children = flower.element.children();
