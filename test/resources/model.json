@@ -1,0 +1,47 @@
+{
+  "classes": {
+    "object": {
+      "properties": {
+        "id": {
+          "type": "int",
+          "readonly": true
+        },
+        "name": {
+          "type": "string"
+        },
+        "class": {
+          "type": "string"
+        }
+      }
+    },
+    "book": {
+      "properties": {
+        "id":{
+          "type": "int"           
+        },
+        "name": {
+          "type": "string"           
+        }
+      }
+    },
+    "character": {
+      "parent": "object",
+      "properties": {
+        "id": {
+          "type": "int",
+          "readonly": true
+        },
+        "gender": {
+          "type": "string"           
+        },
+        "personality": {
+          "type": "string"
+        },
+        "books": {
+          "type": "list",
+          "reference_class": "book"
+        }
+      }
+    }
+  }
+}
