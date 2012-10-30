@@ -50,7 +50,7 @@ $(function(){
     var b = B.create();
     ok(b.method, 'Object b inherits methods from parent class A');
     ok(b.own_method, 'Object b gains methods from class B');
-    ok(typeof b.future_method == 'function', 'Object b successfully replaced a property with a function');
+//    ok(typeof b.future_method == 'function', 'Object b successfully replaced a property with a function');
   });
   
   test("Meta_Object.connections", function() {    

@@ -3,8 +3,7 @@
     "object": {
       "properties": {
         "id": {
-          "type": "int",
-          "readonly": true
+          "type": "int"
         },
         "name": {
           "type": "string"
@@ -21,6 +20,10 @@
         },
         "name": {
           "type": "string"           
+        },
+        "characters": {
+          "type": "list",
+          "reference_class": "character"
         }
       }
     },
@@ -28,8 +31,7 @@
       "parent": "object",
       "properties": {
         "id": {
-          "type": "int",
-          "readonly": true
+          "type": "int"
         },
         "gender": {
           "type": "string"           
