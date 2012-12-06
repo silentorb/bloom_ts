@@ -13,6 +13,10 @@ function test_fire(target, event) {
 }
 
 var A = Meta_Object.sub_class('A', {
+  initialize: function(action) {
+    if (action)
+      action('A');
+  },
   method: function() {
     return 'a';
   },
@@ -21,6 +25,10 @@ var A = Meta_Object.sub_class('A', {
 });
 
 var B = A.sub_class('B', {
+  initialize: function(action) {
+    if (action)
+      action('B');
+  },
   property: 50,
   own_method: function() {
     return 'b';
@@ -47,9 +55,14 @@ $(function(){
   });
   
   test("Meta_Object.inheritance", function() {
-    var b = B.create();
+    var order_check = [];
+    function order(name) {
+      order_check.push(name);
+    }
+    var b = B.create(order);
     ok(b.method, 'Object b inherits methods from parent class A');
     ok(b.own_method, 'Object b gains methods from class B');
+    ok(order_check[0] == 'A' && order_check[1] == 'B', 'Initialize functions are firing in the correct order.');
 //    ok(typeof b.future_method == 'function', 'Object b successfully replaced a property with a function');
   });
   
