@@ -23,15 +23,15 @@ Example:
 
 ```javascript
 var Monster = Meta_Object.subclass('Monster', {
-health: 12,
-race: 'unknown',
-initialize: function(race) {
-this.race = race;
-},
-eat: function(victim) {
-this.health += victim.health;
-victim.die();
-}
+	health: 12,
+	race: 'unknown',
+	initialize: function(race) {
+		this.race = race;
+	},
+	eat: function(victim) {
+		this.health += victim.health;
+		victim.die();
+	}
 });
 
 var dragon = Monster.create('dragon');
