@@ -21,6 +21,7 @@ The properties argument is an array of variables and functions that compose the 
 
 Example:
 
+```javascript
 var Monster = Meta_Object.subclass('Monster', {
 health: 12,
 race: 'unknown',
@@ -34,6 +35,7 @@ victim.die();
 });
 
 var dragon = Monster.create('dragon');
+```
 
 If a Meta_Object has an initialize method, that method is called when the class is instantiated.  The base class initialize method is called first, followed by each child initialize method.
 
