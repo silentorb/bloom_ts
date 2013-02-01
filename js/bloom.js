@@ -1398,17 +1398,22 @@ Bloom.bind_input = function(input, owner, name, source) {
   });
 }
 
-Bloom.initialize_page = function(Page) {
-  MetaHub.metanize(Page);
+Bloom.initialize_page = Bloom.landscape = function(Garden) {
+  MetaHub.metanize(Garden);
 
   jQuery(function () {
     if (window.UNIT_TEST == undefined) {
-      if (typeof Page.initialize_core == 'function') {
-        Page.initialize_core();
+      var landscape_element = $('#garden-landscape');
+      if (landscape_element.length) {
+        var landscape = JSON.parse(landscape_element.text());
+        MetaHub.extend(Garden, landscape);
       }
-      Page.load(Ground);
+      if (typeof Garden.initialize_core == 'function') {
+        Garden.initialize_core();
+      }
+      Garden.load(Ground);
       Ground.fertilize(function() {
-        Page.initialize();
+        Garden.initialize();
       });
     }
   });
