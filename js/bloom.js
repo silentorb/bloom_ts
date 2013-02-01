@@ -1408,6 +1408,9 @@ Bloom.initialize_page = Bloom.landscape = function(Garden) {
         var landscape = JSON.parse(landscape_element.text());
         MetaHub.extend(Garden, landscape);
       }
+      if (Garden.ajax_prefix) {
+        Bloom.ajax_prefix = Garden.ajax_prefix;
+      }
       if (typeof Garden.initialize_core == 'function') {
         Garden.initialize_core();
       }
