@@ -1398,8 +1398,33 @@ Bloom.bind_input = function(input, owner, name, source) {
   });
 }
 
-Bloom.initialize_page = Bloom.landscape = function(Garden) {
-  MetaHub.metanize(Garden);
+Bloom.initialize_page = function(Page) {
+  MetaHub.metanize(Page);
+
+  jQuery(function () {
+    if (window.UNIT_TEST == undefined) {
+      var landscape_element = $('#garden-landscape');
+      if (landscape_element.length) {
+        var landscape = JSON.parse(landscape_element.text());
+        MetaHub.extend(Page, landscape);
+      }
+      if (Page.ajax_prefix) {
+        Bloom.ajax_prefix = Page.ajax_prefix;
+      }
+      if (typeof Page.initialize_core == 'function') {
+        Page.initialize_core();
+      }
+      Page.load(Ground);
+      Ground.fertilize(function() {
+        Page.initialize();
+      });
+    }
+  });
+}
+
+Bloom.landscape = function(properties) {
+  var Garden = Meta_Object.create();
+  MetaHub.extend(Garden, properties);
 
   jQuery(function () {
     if (window.UNIT_TEST == undefined) {
@@ -1408,13 +1433,23 @@ Bloom.initialize_page = Bloom.landscape = function(Garden) {
         var landscape = JSON.parse(landscape_element.text());
         MetaHub.extend(Garden, landscape);
       }
-      if (Garden.ajax_prefix) {
+      
+      if (Garden.ajax_prefix)
         Bloom.ajax_prefix = Garden.ajax_prefix;
-      }
-      if (typeof Garden.initialize_core == 'function') {
+      
+      if (typeof Garden.initialize_core == 'function')
         Garden.initialize_core();
+      
+      if (Garden.blocks) {
+        for (var i in Garden.blocks) {
+          var block = Garden.blocks[i];
+          Ground.add(i, block, Block.load_library);    
+        }
       }
-      Garden.load(Ground);
+      
+      if (typeof Garden.load == 'function')
+        Garden.load(Ground);
+      
       Ground.fertilize(function() {
         Garden.initialize();
       });
