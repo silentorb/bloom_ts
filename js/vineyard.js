@@ -76,7 +76,8 @@ var Vineyard = (function () {
         property.trellis = this;
         if (property.type == 'list' || property.type == 'reference') {
           // Convert string to object reference.
-          property.target_trellis = this.vineyard.trellises[property.reference_trellis]
+//          property.target_trellis = this.vineyard.trellises[property.trellis];
+          property.target_trellis = property.trellis;
         }
         if (property.name == this.primary_key && property.readonly === undefined) {
           property.readonly = true;
@@ -305,7 +306,7 @@ var Vineyard = (function () {
     block: 'reference-vine',
     initialize: function() {
       var self = this;
-      Bloom.get(this.trellis.vineyard.get_url + '?trellis=' + this.property.reference_trellis, function(response) {
+      Bloom.get(this.trellis.vineyard.get_url + '?trellis=' + this.property.trellis, function(response) {
         var select = Bloom.Combo_Box.create(response.objects);
         self.append(select);
         var reference = self.seed;

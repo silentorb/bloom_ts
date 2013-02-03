@@ -1437,6 +1437,9 @@ Bloom.landscape = function(properties) {
       if (Garden.ajax_prefix)
         Bloom.ajax_prefix = Garden.ajax_prefix;
       
+      if (Garden.block_path)
+        Block.source_path = Garden.block_path;
+      
       if (typeof Garden.initialize_core == 'function')
         Garden.initialize_core();
       
