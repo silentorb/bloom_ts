@@ -73,11 +73,13 @@ var Vineyard = (function () {
       for (var p in this.properties) {
         var property = this.properties[p];
         property.name = p;
-        property.trellis = this;
+        property.parent = this;
         if (property.type == 'list' || property.type == 'reference') {
           // Convert string to object reference.
-//          property.target_trellis = this.vineyard.trellises[property.trellis];
-          property.target_trellis = property.trellis;
+          property.target_trellis = this.vineyard.trellises[property.trellis];
+          if (!property.target_trellis)
+            throw new Error("Target Trellis is undefined.");
+        //          property.target_trellis = property.trellis;
         }
         if (property.name == this.primary_key && property.readonly === undefined) {
           property.readonly = true;
@@ -120,8 +122,8 @@ var Vineyard = (function () {
             }
           }
           else if (property.type == 'reference') {
-            // Not yet implemented
-            delete item[name];  
+          // Not yet implemented
+          //            delete item[name];  
           }
         }
       }
@@ -232,7 +234,7 @@ var Vineyard = (function () {
       var self = this, seed = this.seed;
       this.seed = seed.seed; // Unbox the real seed from the containing temp seed.
       this.property = seed.property;
-      this.trellis = seed.trellis || this.property.trellis;
+      this.trellis = seed.trellis || this.property.parent;
       this.name = seed.name = seed.name || this.property.name;
       this.owner = seed.owner;
 
@@ -309,7 +311,7 @@ var Vineyard = (function () {
       Bloom.get(this.trellis.vineyard.get_url + '?trellis=' + this.property.trellis, function(response) {
         var select = Bloom.Combo_Box.create(response.objects);
         self.append(select);
-        var reference = self.seed;
+        var reference = self.seed || {};
         reference.id = select.get_selection().id;
 
         self.listen(select, 'change', function(option) {
@@ -359,7 +361,7 @@ var Vineyard = (function () {
       this.wrap_dynamic_vine_modifier(main_list, select)
     },
     create_new_entry: function(main_list) {
-      var vineyard = this.property.trellis.vineyard;
+      var vineyard = this.property.parent.vineyard;
       var arbor_type = vineyard.default_arbor || Arbor;
         
       var arbor = arbor_type.create({
