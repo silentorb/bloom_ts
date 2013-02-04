@@ -1422,44 +1422,6 @@ Bloom.initialize_page = function(Page) {
   });
 }
 
-Bloom.landscape = function(properties) {
-  var Garden = Meta_Object.create();
-  MetaHub.extend(Garden, properties);
-
-  jQuery(function () {
-    if (window.UNIT_TEST == undefined) {
-      var landscape_element = $('#garden-landscape');
-      if (landscape_element.length) {
-        var landscape = JSON.parse(landscape_element.text());
-        MetaHub.extend(Garden, landscape);
-      }
-      
-      if (Garden.ajax_prefix)
-        Bloom.ajax_prefix = Garden.ajax_prefix;
-      
-      if (Garden.block_path)
-        Block.source_path = Garden.block_path;
-      
-      if (typeof Garden.initialize_core == 'function')
-        Garden.initialize_core();
-      
-      if (Garden.blocks) {
-        for (var i in Garden.blocks) {
-          var block = Garden.blocks[i];
-          Ground.add(i, block, Block.load_library);    
-        }
-      }
-      
-      if (typeof Garden.load == 'function')
-        Garden.load(Ground);
-      
-      Ground.fertilize(function() {
-        Garden.initialize();
-      });
-    }
-  });
-}
-
 Bloom.render_query = function(parameters) {
   var result = MetaHub.extend({}, parameters);
   var query = '';

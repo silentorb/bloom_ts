@@ -6,9 +6,9 @@ var Vineyard = (function () {
     default_arbor: null,
     initialize: function(middle_data, bloom_data) {
       var x, trellis;
-      
+
       // Merge client specific settings into the main schema.
-      for (var x in bloom_data) {
+      for (x in bloom_data) {
         if (middle_data[x]) {
           this.extend_trellis(middle_data[x], bloom_data[x]);
         }
@@ -429,7 +429,7 @@ var Vineyard = (function () {
       
       for (var name in type_info.properties) {
         var property = type_info.properties[name];
-        if (Meta_Object.has_property(seed, name) && !property.readonly) {
+        if (Meta_Object.has_property(seed, name) && !property.readonly && property.visible !== false) {
           var control = this.create_flower(seed, property);
           var skin = Vine_Skin.create(control);
           this.list.connect(skin, 'child', 'parent');          
