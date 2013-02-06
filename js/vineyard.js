@@ -51,8 +51,8 @@ var Vineyard = (function () {
   }
   
   /*
-   *  Trellis = Table Schema
-   */
+ *  Trellis = Table Schema
+ */
   var Trellis = Meta_Object.subclass('Trellis', {
     primary_key: 'id',
     initialize: function(name, source, vineyard) {
@@ -151,6 +151,9 @@ var Vineyard = (function () {
     plant: function() {
       var property, name, type, item = {}, p;
       for (p in this.trellis.properties) {
+        if (p == 'type')
+          continue;
+        
         property = this.trellis.properties[p];
         name = property.name;
         type = property.type;
@@ -169,7 +172,7 @@ var Vineyard = (function () {
             }
           }
           else if (type == 'reference') {
-            
+            item[name] = value.id;
           }
           else {
             item[name] = value;
@@ -194,6 +197,9 @@ var Vineyard = (function () {
     seed_name: 'objects',
     initialize: function(trellis) {      
       this.optimize_getter('children', 'child');
+      if (!trellis)
+        throw new Error('Trellis is undefined');
+      
       this.trellis = trellis;
     },
     add_children: function(seed) {
@@ -227,8 +233,8 @@ var Vineyard = (function () {
   });
   
   /*
-   *  Vine = Form Field
-   */
+*  Vine = Form Field
+*/
   var Vine = Bloom.Flower.subclass('Vine', {
     initialize: function() {
       var self = this, seed = this.seed;
@@ -311,10 +317,22 @@ var Vineyard = (function () {
       Bloom.get(this.trellis.vineyard.get_url + '?trellis=' + this.property.trellis, function(response) {
         var select = Bloom.Combo_Box.create(response.objects);
         self.append(select);
-        var reference = self.seed || {};
-        reference.id = select.get_selection().id;
+        if (!self.seed) {
+          self.seed = self.owner[self.property.name] = {
+            id: select.get_selection().id
+          };
+        }
+        var reference = self.seed;
+        //        select.set_value(self.owner[self.property.name]);
+        for (var i = 0; i < response.objects.length; i++) {
+          if (response.objects[i].id === reference.id) {
+            select.set_value(i);
+            break;
+          }
+        }
 
         self.listen(select, 'change', function(option) {
+          //          self.owner[self.property.name] = option.id;
           reference.id = option.id;
         });
       });
@@ -394,8 +412,8 @@ var Vineyard = (function () {
   };
   
   /*
-     *  Arbor = FORM
-     */
+*  Arbor = FORM
+*/
   var Arbor = Bloom.Flower.subclass('Arbor', {
     block: 'list',
     initialize: function() {
@@ -429,7 +447,8 @@ var Vineyard = (function () {
       
       for (var name in type_info.properties) {
         var property = type_info.properties[name];
-        if (Meta_Object.has_property(seed, name) && !property.readonly && property.visible !== false) {
+        // if (Meta_Object.has_property(seed, name) && 
+        if (!property.readonly && property.visible !== false) {
           var control = this.create_flower(seed, property);
           var skin = Vine_Skin.create(control);
           this.list.connect(skin, 'child', 'parent');          

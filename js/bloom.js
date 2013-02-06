@@ -229,15 +229,19 @@ var Bloom = (function () {
     render: function(onload) {
       var self = this;
 
-      Block.load(this.block, function(block) {
-        self.element = block.render(self);
-        if (self.element.length == 0) {
-          throw new Error('self.element is empty!');
-        }
-        self.source_to_element();
-        if (typeof onload == 'function')
-          onload(self);        
-      });
+      //Block.load(this.block, function(block) {
+      var block = Block.library[this.block];
+      if (!block)
+        throw new Error ("Block '" + this.block + "' not found.");
+      
+      self.element = block.render(self);
+      if (self.element.length == 0) {
+        throw new Error('self.element is empty!');
+      }
+      self.source_to_element();
+      if (typeof onload == 'function')
+        onload(self);        
+    //});
     },
     append: function(flower) {
       this.element.append(flower.element);
@@ -652,12 +656,28 @@ var Bloom = (function () {
   var Combo_Box = Flower.subclass('Combo_Box', {
     name_property: 'name',
     initialize: function() {
-      var self = this;
       if (!this.element) {
         this.element = $('<select/>');
       }
+      
+      this.populate();
+    },
+    get_index: function() {
+      return this.element.find('option:selected').val();
+    },
+    get_selection: function() {
+      return this.seed[this.get_index()];
+    },
+    populate: function(value_property, value) {
+      var index, item, self = this;
       for (var i = 0; i < this.seed.length; i++) {
-        this.element.append('<option value=' + i + '>' + this.seed[i][this.name_property] + '</option>');
+        item = this.seed[i];
+        if (value_property)
+          index = item[value_property];
+        else
+          index = i;
+        
+        this.element.append('<option value=' + index + '>' + item[this.name_property] + '</option>');
       }
       
       if (this.seed.length > 0) {
@@ -668,12 +688,12 @@ var Bloom = (function () {
         var selection = self.get_selection();        
         self.invoke('change', selection);        
       });
+      
+      if (value)
+        this.set_value(value);
     },
-    get_index: function() {
-      return this.element.find('option:selected').val();
-    },
-    get_selection: function() {
-      return this.seed[this.get_index()];
+    set_value: function(value) {
+      this.element.val(value);
     }
   });
     
