@@ -1,6 +1,6 @@
 var config = module.exports;
 
-config["My tests"] = {
+config["Bloom tests"] = {
   rootPath: "../",
   environment: "browser", // or "node"
   sources: [

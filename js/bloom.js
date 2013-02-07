@@ -1227,10 +1227,28 @@ Bloom.alert = function(message, title) {
     
   dialog.show();
 };
+
+Bloom.join = function(a, b) {
+  if (typeof a !== 'string' || a.length === 0)
+    return b;
+  
+  if (typeof b !== 'string' || b.length === 0)
+    return a;
+  
+  if (a[a.length - 1] == '/') {
+    a = a.substring(0, a.length - 1);
+  }
+  
+  if (b[0] == '/') {
+    b = b.substring(1);
+  }
+    
+  return a + '/' + b;
+}
   
 Bloom.get = function (url, action, error) {
   if (Bloom.ajax_prefix) {
-    url = Bloom.ajax_prefix + url;
+    url = Bloom.join(Bloom.ajax_prefix, url);
   }
   
   var success = function(response) {

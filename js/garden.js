@@ -64,48 +64,34 @@ var Garden = Meta_Object.subclass('Garden', {
   blocks: {
     'blocks': [ 'blocks' ]
   },
-  content_panel_type: Content_Panel,
   grow: function(next_action) {
     var self = this;
+     this.request = {
+      'parameters': Bloom.get_url_properties(),
+      path: Garden.get_path_array(window.location.pathname, this.ajax_path)
+    };
+    
+    this.request.trellis = this.request.path[1];
+    this.request.action = this.request.path[2];
     Bloom.output = this.print;
-    var request = Bloom.get_url_properties();
     
     Bloom.get('vineyard/model.json', function(response) {
       self.vineyard = Vineyard.create(response.trellises, response.views);
       self.vineyard.update_url = 'vineyard/update';
       self.vineyard.get_url = 'vineyard/get';
       self.invoke('initialize');
-    
+      /*
       var content_element = $('.editor .content');
       if (content_element.length > 0) {
-        self.content_panel = self.content_panel_type.create();
+        self.content_panel = Content_Panel.create(content_element);
         self.content_panel.set_garden(self);
       }
-      
-      if (request.trellis) {
-        if (request.action == 'create') {
-          self.invoke('create', self.vineyard.trellises[request.trellis]);
-        //          Garden.content_panel.load_create(Garden.vineyard.trellises[request.trellis]);
-        }
-        else if (request.id) {
-          self.goto_item(request.trellis, request.id);
-        }
-        else {
-          self.invoke('index', request.trellis);
-
-        }
-      }
-      //        var query = Garden.initialize_query('/jester/jest/get_root_quests');
-      //        Bloom.get(query, function(response) {
-      //          quests.set_seed(response.objects);
-      //        });
-      //Garden.content_panel.load_index(request.trellis);
-      else {
-        self.invoke('other', request);
-      }
+      */
       
       if (typeof next_action == 'function')
         next_action.apply(self);
+      
+      self.process_request();
     }); 
   },
   initialize_query: function(query) {
@@ -138,6 +124,29 @@ var Garden = Meta_Object.subclass('Garden', {
     }
     
     container.append($('<div>' + response.message + '</div>'));
+  },
+  process_request: function() {
+          if (this.request.trellis) {
+        if (this.request.action == 'create') {
+          this.invoke('create', this.vineyard.trellises[this.request.trellis]);
+        //          Garden.content_panel.load_create(Garden.vineyard.trellises[request.trellis]);
+        }
+        else if (this.request.id) {
+          this.goto_item(this.request.trellis, this.request.id);
+        }
+        else {
+          this.invoke('index', this.request.trellis);
+
+        }
+      }
+      //        var query = Garden.initialize_query('/jester/jest/get_root_quests');
+      //        Bloom.get(query, function(response) {
+      //          quests.set_seed(response.objects);
+      //        });
+      //Garden.content_panel.load_index(request.trellis);
+      else {
+        this.invoke('other');
+      }
   }
 });
 
@@ -153,7 +162,9 @@ Garden.grow = function(name, properties) {
       
     if (garden.ajax_prefix)
       Bloom.ajax_prefix = garden.ajax_prefix;
-      
+    if (garden.ajax_path)
+      Bloom.ajax_prefix = garden.ajax_path;
+    
     if (garden.block_path)
       Block.source_path = garden.block_path;
       
@@ -174,6 +185,25 @@ Garden.grow = function(name, properties) {
       Garden.methods.grow.call(garden, garden.grow);
     });
   });
+}
+
+Garden.get_path_array = function(path, base) {
+  if (path[0] == '/')
+    path = path.substring(1);
+  
+  path = path.split('/');
+  if (typeof base === 'string' && base.length > 0) {
+    if (base[0] == '/')
+      base = base.substring(1);
+    
+    if (base.length == 0)
+      return path;
+    
+    var base_path = base.split('/');
+    path.splice(0, base_path.length);
+  }
+  
+  return path;
 }
 
 var Index_Item = Flower.sub_class('Index_Item', {

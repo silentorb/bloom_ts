@@ -90,34 +90,35 @@ var Vineyard = (function () {
       // Here source and item stay pointing at the same object
       // but I want to distinguish between them because
       // that might not be the case with all Trellises.
-      var property, seed = Seed.create(source, this), item = {};
+      var property, seed = Seed.create(source, this), data = {};
+      seed.data = data;
       for (var p in this.properties) {
         property = this.properties[p];
         var name = property.name;
 
         if (this.primary_key != name) {
-          if (item[name] === undefined) {
+          if (data[name] === undefined) {
             if (property.insert_trellis) {
-              item[name] = this.name;
+              data[name] = this.name;
             }
             else {
               var default_value = Vineyard.default_values[property.type];
               if (typeof default_value == 'function') {
-                item[name] = default_value(item, property);
+                data[name] = default_value(seed, property);
               }
               else if (default_value !== undefined) {
-                item[name] = default_value;
+                data[name] = default_value;
               }
             }
           }
           else if (property.type == 'list') {
-            var list = item[name];
-            delete item[name];
-            item.optimize_getter(name, property.target_trellis.name);
+            var list = data[name];
+            delete data[name];
+            data.optimize_getter(name, property.target_trellis.name);
             if (list && list.length) {
               for (var i = 0; i < list.length; i++) {
                 var child = list[i] = Seed.create(list[i], property.target_trellis);
-                child.connect(item, 'parent', property.target_trellis.name);
+                child.connect(data, 'parent', property.target_trellis.name);
               }
             }
           }
@@ -128,7 +129,6 @@ var Vineyard = (function () {
         }
       }
       
-      seed.data = item;
       return seed;
     }
   });
@@ -148,6 +148,19 @@ var Vineyard = (function () {
           this.deleted[type] = [];
         
         this.deleted[type].push(child);
+      });
+    },
+    // Modified to point to the data member.
+    optimize_getter: function(property_name, connection_name) {    
+      var array = [];
+      this.data[property_name] = array;
+          
+      this.listen(this, 'connect.' + connection_name, function(item) {
+        array.push(item);
+      });
+
+      this.listen(this, 'disconnect.' + connection_name, function(item) {
+        Array.remove(array, item);
       });
     },
     plant: function() {
@@ -193,6 +206,7 @@ var Vineyard = (function () {
         }
       });
     },
+    // Modified to point to the data member.
     value: function(name, value, source) {
       var data = this.data;
       if (value === undefined || value === data[name])
