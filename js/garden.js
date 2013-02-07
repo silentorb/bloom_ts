@@ -25,7 +25,9 @@ var Content_Panel = Flower.sub_class('Content_Panel', {
     for (var x in trellis.properties) {
       if (trellis.properties[x] !== undefined && request[x] != undefined) {
         if (trellis.properties[x].trellis)
-          item[x] = { id: request[x] };
+          item[x] = {
+            id: request[x]
+          };
         else
           item[x] = request[x];
       }
@@ -63,7 +65,7 @@ var Garden = Meta_Object.subclass('Garden', {
     'blocks': [ 'blocks' ]
   },
   content_panel_type: Content_Panel,
-  grow: function() {
+  grow: function(next_action) {
     var self = this;
     Bloom.output = this.print;
     var request = Bloom.get_url_properties();
@@ -74,8 +76,11 @@ var Garden = Meta_Object.subclass('Garden', {
       self.vineyard.get_url = 'vineyard/get';
       self.invoke('initialize');
     
-      self.content_panel = self.content_panel_type.create($('.editor .content'));
-      self.content_panel.set_garden(self);
+      var content_element = $('.editor .content');
+      if (content_element.length > 0) {
+        self.content_panel = self.content_panel_type.create();
+        self.content_panel.set_garden(self);
+      }
       
       if (request.trellis) {
         if (request.action == 'create') {
@@ -98,6 +103,9 @@ var Garden = Meta_Object.subclass('Garden', {
       else {
         self.invoke('other', request);
       }
+      
+      if (typeof next_action == 'function')
+        next_action.apply(self);
     }); 
   },
   initialize_query: function(query) {
@@ -163,8 +171,7 @@ Garden.grow = function(name, properties) {
       garden.load(Bloom.Ground);
       
     Bloom.Ground.fertilize(function() {
-      Garden.methods.grow.apply(garden);
-      garden.grow();
+      Garden.methods.grow.call(garden, garden.grow);
     });
   });
 }

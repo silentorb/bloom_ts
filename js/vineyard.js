@@ -403,7 +403,7 @@ var Vineyard = (function () {
     }
   });
   
-  Vineyard.properties.default_vine = Text_Vine;
+  Vineyard.properties.default_vine = String_Vine;
   Vineyard.properties.vines = {
     "string": String_Vine,
     "text": Text_Vine,
