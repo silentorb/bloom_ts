@@ -90,7 +90,7 @@ var Vineyard = (function () {
       // Here source and item stay pointing at the same object
       // but I want to distinguish between them because
       // that might not be the case with all Trellises.
-      var property, item = Seed.create(source, this);
+      var property, seed = Seed.create(source, this), item = {};
       for (var p in this.properties) {
         property = this.properties[p];
         var name = property.name;
@@ -127,7 +127,9 @@ var Vineyard = (function () {
           }
         }
       }
-      return item;
+      
+      seed.data = item;
+      return seed;
     }
   });
 
@@ -157,7 +159,7 @@ var Vineyard = (function () {
         property = this.trellis.properties[p];
         name = property.name;
         type = property.type;
-        var value = this[name];
+        var value = this.value(name);
         
         if (value !== undefined && value !== null) {
           if (type == 'list') {
@@ -190,6 +192,17 @@ var Vineyard = (function () {
           });
         }
       });
+    },
+    value: function(name, value, source) {
+      var data = this.data;
+      if (value === undefined || value === data[name])
+        return data[name];
+      
+      var old_value = data[name]
+      data[name] = value;
+      Meta_Object.invoke_binding(source, this, 'change.' + name, value, old_value);
+      Meta_Object.invoke_binding(source, this, 'change', name, value, old_value);
+      return value;
     }
   });
 
@@ -437,7 +450,7 @@ var Vineyard = (function () {
       var control = control_type.create({
         owner: seed,
         property: property,
-        seed: Meta_Object.value.call(seed, property.name)
+        seed: seed.value(property.name)
       });
       
       return control;
