@@ -123,6 +123,7 @@ var Vineyard = (function () {
             }
           }
           else if (property.type == 'reference') {
+            data[name] = Seed.create(data[name], property.target_trellis);
           // Not yet implemented
           //            delete item[name];  
           }
@@ -137,7 +138,8 @@ var Vineyard = (function () {
     deleted: {},
     initialize: function(source, trellis) {
       source = source || {};
-      MetaHub.extend(this, source);
+      this.data = {};
+      MetaHub.extend(this.data, source);
       this.value = Meta_Object.value;
       this.trellis = trellis;
       this.listen(this, 'connect', this.on_child_connect);
@@ -295,7 +297,7 @@ var Vineyard = (function () {
   var Vine_Skin = Bloom.Flower.subclass('Vine_Skin', {
     block: 'vine-skin',
     initialize: function() {            
-      var label = this.element.find('.name');
+      var label = this.element.find('label');
       label.text(Vine.pretty_name(this.seed.name));
       this.element.addClass(this.seed.property.type);
       this.append(this.seed);

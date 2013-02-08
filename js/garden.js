@@ -66,7 +66,7 @@ var Garden = Meta_Object.subclass('Garden', {
   },
   grow: function(next_action) {
     var self = this;
-     this.request = {
+    this.request = {
       'parameters': Bloom.get_url_properties(),
       path: Garden.get_path_array(window.location.pathname, this.ajax_path)
     };
@@ -126,27 +126,27 @@ var Garden = Meta_Object.subclass('Garden', {
     container.append($('<div>' + response.message + '</div>'));
   },
   process_request: function() {
-          if (this.request.trellis) {
-        if (this.request.action == 'create') {
-          this.invoke('create', this.vineyard.trellises[this.request.trellis]);
-        //          Garden.content_panel.load_create(Garden.vineyard.trellises[request.trellis]);
-        }
-        else if (this.request.id) {
-          this.goto_item(this.request.trellis, this.request.id);
-        }
-        else {
-          this.invoke('index', this.request.trellis);
-
-        }
+    if (this.request.trellis) {
+      if (this.request.action == 'create') {
+        this.invoke('create', this.vineyard.trellises[this.request.trellis]);
+      //          Garden.content_panel.load_create(Garden.vineyard.trellises[request.trellis]);
       }
-      //        var query = Garden.initialize_query('/jester/jest/get_root_quests');
-      //        Bloom.get(query, function(response) {
-      //          quests.set_seed(response.objects);
-      //        });
-      //Garden.content_panel.load_index(request.trellis);
+      else if (this.request.id) {
+        this.goto_item(this.request.trellis, this.request.id);
+      }
       else {
-        this.invoke('other');
+        this.invoke('index', this.request.trellis);
+
       }
+    }
+    //        var query = Garden.initialize_query('/jester/jest/get_root_quests');
+    //        Bloom.get(query, function(response) {
+    //          quests.set_seed(response.objects);
+    //        });
+    //Garden.content_panel.load_index(request.trellis);
+    else {
+      this.invoke('other');
+    }
   }
 });
 
@@ -180,10 +180,16 @@ Garden.grow = function(name, properties) {
       
     if (typeof garden.load == 'function')
       garden.load(Bloom.Ground);
-      
-    Bloom.Ground.fertilize(function() {
+    
+    if (Bloom.Ground.is_empty()) {
+      Bloom.Ground.fertilize(function() {
+        Garden.methods.grow.call(garden, garden.grow);
+      });
+    }
+    else
+    {
       Garden.methods.grow.call(garden, garden.grow);
-    });
+    }
   });
 }
 
