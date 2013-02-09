@@ -135,9 +135,10 @@ var Vineyard = (function () {
 
   var Seed = Meta_Object.subclass('Seed', {
     deleted: {},
-    get_url: function(parameters, custom_root) {
-      custom_root = custom_root || 'vineyard';
-      return custom_root + '/' + this.trellis.name + Bloom.render_query(parameters);
+    get_url: function(type, parameters) {
+      var channel = this.trellis.vineyard.garden.irrigation.get_channel(type, this);
+      var params = MetaHub.extend({ 'id': this.value('id') }, parameters);
+      return channel + '/' + this.trellis.name + Bloom.render_query(params);
     },
     initialize: function(source, trellis) {
       source = source || {};
@@ -262,7 +263,7 @@ var Vineyard = (function () {
       });
     }
   });
-  
+
   /*
 *  Vine = Form Field
 */
@@ -345,7 +346,7 @@ var Vineyard = (function () {
     block: 'reference-vine',
     initialize: function() {
       var self = this;
-      Bloom.get(Bloom.join(this.trellis.vineyard.get_url, this.property.trellis), function(response) {
+      Bloom.get(self.seed.get_url('seed'), function(response) {
         var select = Bloom.Combo_Box.create(response.objects);
         self.append(select);
         if (!self.seed) {

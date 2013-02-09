@@ -13,47 +13,78 @@ var Bloom = (function () {
   MetaHub.import_all(); 
   MetaHub.current_module = Bloom;
   
-  var Ground = {
+  var Mulch = {
     dirt: {},
     add: function(type, names, fertilizer) {
-      Ground.dirt[type] = {
+      // This may change down the road, but currently fertilize() can be called
+      // multiple times.  Because of that, Mulch prevents overwriting of dirt types
+      // or there would be redundant calls to the server.  If two scripts are
+      // using the same dirt type they need to coordinate the composition of that
+      // dirt between themselves, Mulch isn't going to manage it.
+      if (Mulch.dirt[type])
+        return;
+      
+      Mulch.dirt[type] = {
         fertilizer: fertilizer,
+        tilled: false,
         names: names
       };
     },
-    fertilize: function(onfinished) {
-      Ground.load_finished = onfinished;
-      for (var type in Ground.dirt) {
-        for (var x = 0; x < Ground.dirt[type].names.length; x++) {
-          Ground.dirt[type].fertilizer(Ground.dirt[type].names[x]);
+    // Originally this simply took a function, but that has been deprecated
+    // in favor of also passing a list of blocks as 'dirt'.
+    fertilize: function(pile, onfinished) {
+      if (typeof pile == 'function') {
+        onfinished = pile;
+      }
+      else {
+        if (pile) {
+          for (var i in pile) {
+            var dirt = pile[i];
+            Mulch.add(i, dirt.handfulls, dirt.fertilizer);    
+          }
+        }
+      }
+      
+      // A valid callback is required because otherwise Mulch is pointless.
+      if (typeof onfinished != 'function')
+        throw new Error('Mulch.fertilize() requires a callback function.');
+      
+      Mulch.load_finished = onfinished;
+      for (var type in Mulch.dirt) {
+        if (Mulch.tilled)
+          continue;
+        var dirt = Mulch.dirt[type];
+        for (var x = 0; x < dirt.names.length; x++) {
+          dirt.fertilizer(dirt.names[x]);
         }
       }
     },
     till: function(type, name) {
-      if (Ground.dirt[type] && Ground.dirt[type].names.indexOf(name) > -1) {
-        //        console.log('updating ' + name);
-        Array.remove(Ground.dirt[type].names, name);
-        if (Ground.is_empty()) {
-          //          console.log('finished');
-          if (typeof Ground.load_finished == 'function') {
-            Ground.load_finished();
-            delete Ground.load_finished;
+      var dirt = Mulch.dirt[type];
+      if (dirt && dirt.names.indexOf(name) > -1) {
+        dirt.tilled = true;
+        Array.remove(Mulch.dirt[type].names, name);
+        if (Mulch.is_empty()) {
+          if (typeof Mulch.load_finished == 'function') {
+            Mulch.load_finished();
+            delete Mulch.load_finished;
           }
 
-          Ground.dirt = {};
+          Mulch.dirt = {};
         }
       }
     },
     is_empty: function() {
-      for (var x in Ground.dirt) {
-        if (Ground.dirt[x].names.length > 0)
+      for (var x in Mulch.dirt) {
+        if (Mulch.dirt[x].names.length > 0)
           return false;
       }
     
       return true;
     }
   };
-  Bloom.Ground = Ground;
+  Bloom.Ground = Mulch;
+  Bloom.Mulch = Mulch;
   
   function Block(name, html) {
     this.name = name;
@@ -88,7 +119,7 @@ var Bloom = (function () {
             block.queue[x](block);
           }   
           delete block.queue;
-          Ground.till('block', name);
+          Mulch.till('block', name);
         },
         error: function(jqXHR, text, error) {
           var message = 'Could not load ' + name + Block.default_extension + '.';
@@ -97,7 +128,7 @@ var Bloom = (function () {
             alert(message);
           }
           console.log(message);
-          Ground.till('block', name);
+          Mulch.till('block', name);
         }
       });
       
@@ -139,7 +170,7 @@ var Bloom = (function () {
             console.log('Block was missing name or id attribute');
           }
         });
-        Ground.till('blocks', name);
+        Mulch.till('blocks', name);
       },
       error: function(jqXHR, text, error) {
         var message = 'Could not load ' + name + Block.default_extension + '.';
@@ -147,7 +178,7 @@ var Bloom = (function () {
           alert(message);
         }
         console.log(message);
-        Ground.till('block', name);
+        Mulch.till('block', name);
       }
     });
       
@@ -932,15 +963,15 @@ var Bloom = (function () {
       this.invoke('close');
       this.form.invoke('close');
       this.element.remove();
-      if (this.background) {
-        this.background.remove();
-        delete this.background;
+      if (this.backMulch) {
+        this.backMulch.remove();
+        delete this.backMulch;
       }      
     },
     show: function() {
-      if (Block.library['disabled-background']) {
-        this.background = $(Block.library['disabled-background'].html);
-        $('body').append(this.background);  
+      if (Block.library['disabled-backMulch']) {
+        this.backMulch = $(Block.library['disabled-backMulch'].html);
+        $('body').append(this.backMulch);  
       }
       
       jQuery('body').append(this.element);
@@ -1343,7 +1374,7 @@ Bloom.get_url_properties = function() {
 }
 
 Bloom.carrot = function() {
-  $('body').css('background', 'orange');
+  $('body').css('backMulch', 'orange');
   document.title = "What's Up Doc?";
 };
 
@@ -1452,8 +1483,8 @@ Bloom.initialize_page = function(Page) {
       if (typeof Page.initialize_core == 'function') {
         Page.initialize_core();
       }
-      Page.load(Ground);
-      Ground.fertilize(function() {
+      Page.load(Mulch);
+      Mulch.fertilize(function() {
         Page.initialize();
       });
     }

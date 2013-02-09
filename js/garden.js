@@ -8,7 +8,7 @@ var Content_Panel = Flower.sub_class('Content_Panel', {
     this.element.empty();
     var seed = Seed_List.create(self.garden.vineyard.trellises[name]);
     seed.query = function() {
-      return self.garden.initialize_query('vineyard/get/' + name);
+      return self.garden.initialize_query('vineyard/' + name);
     };
     var list = Index_List.create(seed);
     this.append(list);
@@ -61,8 +61,11 @@ var Content_Panel = Flower.sub_class('Content_Panel', {
 });
 
 var Garden = Meta_Object.subclass('Garden', {
-  blocks: {
-    'blocks': [ 'blocks' ]
+  dirt: {
+    blocks: {
+      handfulls: [ 'blocks' ],
+      fertilizer: Block.load_library
+    }
   },
   grow: function(next_action) {
     var self = this;
@@ -77,8 +80,10 @@ var Garden = Meta_Object.subclass('Garden', {
     
     Bloom.get('vineyard/model.json', function(response) {
       self.vineyard = Vineyard.create(response.trellises, response.views);
-      self.vineyard.update_url = 'vineyard/update';
-      self.vineyard.get_url = 'vineyard/get';
+      self.vineyard.garden = self;
+      var irrigation = Irrigation.create();
+      self.irrigation = irrigation
+      irrigation.page_path = self.app_path;
       self.invoke('initialize');
       /*
       var content_element = $('.editor .content');
@@ -131,8 +136,8 @@ var Garden = Meta_Object.subclass('Garden', {
         this.invoke('create', this.vineyard.trellises[this.request.trellis]);
       //          Garden.content_panel.load_create(Garden.vineyard.trellises[request.trellis]);
       }
-      else if (this.request.id) {
-        this.goto_item(this.request.trellis, this.request.id);
+      else if (this.request.parameters.id) {
+        this.goto_item(this.request.trellis, this.request.parameters.id);
       }
       else {
         this.invoke('index', this.request.trellis);
@@ -170,26 +175,10 @@ Garden.grow = function(name, properties) {
       
     if (typeof garden.initialize_core == 'function')
       garden.initialize_core();
-      
-    if (garden.blocks) {
-      for (var i in garden.blocks) {
-        var block = garden.blocks[i];
-        Bloom.Ground.add(i, block, Block.load_library);    
-      }
-    }
-      
-    if (typeof garden.load == 'function')
-      garden.load(Bloom.Ground);
-    
-    if (Bloom.Ground.is_empty()) {
-      Bloom.Ground.fertilize(function() {
-        Garden.methods.grow.call(garden, garden.grow);
-      });
-    }
-    else
-    {
+
+    Bloom.Ground.fertilize(garden.dirt, function() {
       Garden.methods.grow.call(garden, garden.grow);
-    }
+    });
   });
 }
 
@@ -249,5 +238,19 @@ var Edit_Flower = Vineyard.Arbor.sub_class('Edit_Flower', {
     this.element.find('input[type=submit], button[type=submit]').click(function(e) {
       self.seed.plant();
     });
+  }
+});
+  
+var Irrigation = Meta_Object.subclass('Irrigation', {
+  page_path: '',
+  // Eventually parameters will be passed to this, but right now it's very simple.
+  get_channel: function(type) {
+    if (type == 'seed')
+      return 'vineyard';
+    
+    if (type == 'page')
+      return this.page_path;
+    
+    throw new Error (type + ' is not a valid channel type.');
   }
 });
