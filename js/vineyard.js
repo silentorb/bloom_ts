@@ -90,8 +90,7 @@ var Vineyard = (function () {
       // Here source and item stay pointing at the same object
       // but I want to distinguish between them because
       // that might not be the case with all Trellises.
-      var property, seed = Seed.create(source, this), data = {};
-      seed.data = data;
+      var property, seed = Seed.create(source, this), data = seed.data;
       for (var p in this.properties) {
         property = this.properties[p];
         var name = property.name;
@@ -114,11 +113,11 @@ var Vineyard = (function () {
           else if (property.type == 'list') {
             var list = data[name];
             delete data[name];
-            data.optimize_getter(name, property.target_trellis.name);
+            seed.optimize_getter(name, property.target_trellis.name);
             if (list && list.length) {
               for (var i = 0; i < list.length; i++) {
                 var child = list[i] = Seed.create(list[i], property.target_trellis);
-                child.connect(data, 'parent', property.target_trellis.name);
+                child.connect(seed, 'parent', property.target_trellis.name);
               }
             }
           }
@@ -136,11 +135,14 @@ var Vineyard = (function () {
 
   var Seed = Meta_Object.subclass('Seed', {
     deleted: {},
+    get_url: function(parameters, custom_root) {
+      custom_root = custom_root || 'vineyard';
+      return custom_root + '/' + this.trellis.name + Bloom.render_query(parameters);
+    },
     initialize: function(source, trellis) {
       source = source || {};
       this.data = {};
       MetaHub.extend(this.data, source);
-      this.value = Meta_Object.value;
       this.trellis = trellis;
       this.listen(this, 'connect', this.on_child_connect);
     },
@@ -343,7 +345,7 @@ var Vineyard = (function () {
     block: 'reference-vine',
     initialize: function() {
       var self = this;
-      Bloom.get(this.trellis.vineyard.get_url + '?trellis=' + this.property.trellis, function(response) {
+      Bloom.get(Bloom.join(this.trellis.vineyard.get_url, this.property.trellis), function(response) {
         var select = Bloom.Combo_Box.create(response.objects);
         self.append(select);
         if (!self.seed) {

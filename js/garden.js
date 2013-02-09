@@ -8,7 +8,7 @@ var Content_Panel = Flower.sub_class('Content_Panel', {
     this.element.empty();
     var seed = Seed_List.create(self.garden.vineyard.trellises[name]);
     seed.query = function() {
-      return self.garden.initialize_query('vineyard/get?trellis=' + name);
+      return self.garden.initialize_query('vineyard/get/' + name);
     };
     var list = Index_List.create(seed);
     this.append(list);
@@ -102,7 +102,7 @@ var Garden = Meta_Object.subclass('Garden', {
     var self = this;
     if (typeof trellis_name == 'object')
       trellis_name = trellis_name.name;
-    var query = this.initialize_query('vineyard/get?trellis=' + trellis_name + '&id=' + id);
+    var query = this.initialize_query('vineyard/' + trellis_name + '?id=' + id);
     Bloom.get(query, function(response) {
       var item = self.vineyard.trellises[trellis_name].create_seed(response.objects[0]);
       self.content_panel.load_edit(item);
