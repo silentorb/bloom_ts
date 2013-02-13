@@ -84,7 +84,7 @@ var Garden = Meta_Object.subclass('Garden', {
     this.initialize_irrigation();
     this.request = this.irrigation.get_request();
     
-    this.load_model('vineyard/model.json', function() {
+    this.load_model(Bloom.join(this.app_path, 'vineyard/model.json'), function() {
       self.invoke('initialize');
       
       if (typeof next_action == 'function')
@@ -100,7 +100,7 @@ var Garden = Meta_Object.subclass('Garden', {
     var self = this;
     if (typeof trellis_name == 'object')
       trellis_name = trellis_name.name;
-    var query = this.initialize_query(Bloom.join('vineyard', trellis_name, id));
+    var query = Bloom.join(this.app_path, 'vineyard', trellis_name, id);
     Bloom.get(query, function(response) {
       var item = self.vineyard.trellises[trellis_name].create_seed(response.objects[0]);
       self.content_panel.load_edit(item);
@@ -164,18 +164,18 @@ Garden.grow = function(name, properties) {
       MetaHub.extend(garden, settings);
     }
 
-    if (garden.app_path)
-      Bloom.ajax_prefix = garden.app_path;
-    
+//    if (garden.app_path)
+//      Bloom.ajax_prefix = garden.app_path;
+//    
     if (garden.block_path)
       Block.source_path = garden.block_path;
       
     if (typeof garden.initialize_core == 'function')
       garden.initialize_core();
 
-    Bloom.Ground.fertilize(garden.dirt, function() {
+    Bloom.Mulch.fertilize(garden.dirt, function() {
       Garden.methods.grow.call(garden, garden.grow);
-    });
+    }, this.app_path);
   });
 }
 
