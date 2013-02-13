@@ -1259,38 +1259,47 @@ Bloom.alert = function(message, title) {
   dialog.show();
 };
 
-Bloom.join = function(a, b) {
-  if (typeof a !== 'string' || a.length === 0)
-    return b;
+Bloom.join = function() {
+  var i, args = [];
+  for (var i = 0; i < arguments.length; ++i) {
+    var x = arguments[i];
+    if (typeof x === 'number')
+      x = x.toString();
+    else if (typeof x !== 'string' || x.length === 0)
+      continue;
   
-  if (typeof b !== 'string' || b.length === 0)
-    return a;
-  
-  if (a[a.length - 1] == '/') {
-    a = a.substring(0, a.length - 1);
-  }
-  
-  if (b[0] == '/') {
-    b = b.substring(1);
-  }
+    if (args.length > 0 && x[0] == '/') {
+      x = x.substring(1);
+    }
     
-  return a + '/' + b;
+    if (x.length === 0)
+      continue;
+    
+    args.push(x);
+  }
+  
+  for (var i = 0; i < args.length - 1; ++i) {
+    var x = args[i];
+    if (x[x.length - 1] == '/') {
+      args[i] = x.substring(0, x.length - 1);
+    }
+  }
+  
+  return args.join('/');
 }
   
-Bloom.get = function (url, action, error) {
+Bloom.get = function (url, action, error, sync) {
   if (Bloom.ajax_prefix) {
     url = Bloom.join(Bloom.ajax_prefix, url);
   }
   
   var success = function(response) {
-    //    console.log('parsing: ' + url);
-    //    console.log(response);
     try {
       var json = JSON.parse(response);
     }
     catch (e) {
-    //      console.log('There was a problem parsing the server response in Bloom.get');
-    //      console.log(e.message);
+      console.log('There was a problem parsing the server response in Bloom.get');
+      console.log(e.message);
     }
     if (json.success === false || json.success === 'false') {
       Bloom.output(json);
@@ -1306,14 +1315,16 @@ Bloom.get = function (url, action, error) {
       }
     }
   };
-  //  console.log('ajaxing: ' + url);
+
+  console.log ('async', !sync);
 
   jQuery.ajax({
     type: 'GET',
     url: url,
     success: success,
     error: error,
-    dataType: 'text'
+    dataType: 'text',
+    async: !sync
   });
 };
 

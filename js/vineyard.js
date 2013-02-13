@@ -136,9 +136,9 @@ var Vineyard = (function () {
   var Seed = Meta_Object.subclass('Seed', {
     deleted: {},
     get_url: function(type, parameters) {
-      var channel = this.trellis.vineyard.garden.irrigation.get_channel(type, this);
-      var params = MetaHub.extend({ 'id': this.value('id') }, parameters);
-      return channel + '/' + this.trellis.name + Bloom.render_query(params);
+      var garden = this.trellis.vineyard.garden;
+      var channel = garden.irrigation.get_channel(type, this);
+      return Bloom.join(garden.app_path, channel, this.trellis.name, this.data.id) + Bloom.render_query(parameters);
     },
     initialize: function(source, trellis) {
       source = source || {};
