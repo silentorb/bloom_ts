@@ -29,6 +29,9 @@ var Vineyard = (function () {
         return;
         
       for (y in source.properties)  {
+        if (!target.properties[y])
+          target.properties[y] = {};
+        
         MetaHub.extend(target.properties[y], source.properties[y]);
       }      
     }
