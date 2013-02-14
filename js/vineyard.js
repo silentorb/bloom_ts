@@ -139,9 +139,9 @@ var Vineyard = (function () {
   var Seed = Meta_Object.subclass('Seed', {
     deleted: {},
     get_url: function(type, parameters) {
-      var channel = this.trellis.vineyard.garden.irrigation.get_channel(type, this);
-      var params = MetaHub.extend({ 'id': this.value('id') }, parameters);
-      return channel + '/' + this.trellis.name + Bloom.render_query(params);
+      var garden = this.trellis.vineyard.garden;
+      var channel = garden.irrigation.get_channel(type, this);
+      return Bloom.join(garden.app_path, channel, this.trellis.name, this.data.id) + Bloom.render_query(parameters);
     },
     initialize: function(source, trellis) {
       source = source || {};
@@ -465,10 +465,10 @@ var Vineyard = (function () {
       this.seed = options.seed;
       this.trellis = options.trellis;
       this.vineyard = this.trellis.vineyard;      
-      this.generate(this.seed, this.trellis);
+      this.generate_vines(this.seed, this.trellis);
     },
-    create_flower: function(seed, property) {
-      var control_type = this.get_flower_type(property.type);
+    create_vine: function(seed, property) {
+      var control_type = this.get_vine_type(property.type);
       var control = control_type.create({
         owner: seed,
         property: property,
@@ -477,20 +477,20 @@ var Vineyard = (function () {
       
       return control;
     },
-    generate: function(seed, type_info) {      
+    generate_vines: function(seed, type_info) {      
       this.list.empty();
       
       for (var name in type_info.properties) {
         var property = type_info.properties[name];
         // if (Meta_Object.has_property(seed, name) && 
         if (!property.readonly && property.visible !== false) {
-          var control = this.create_flower(seed, property);
+          var control = this.create_vine(seed, property);
           var skin = Vine_Skin.create(control);
           this.list.connect(skin, 'child', 'parent');          
         }
       }
     },
-    get_flower_type: function(type) {
+    get_vine_type: function(type) {
       var vineyard = this.trellis.vineyard;
       if (vineyard.vines[type])
         return vineyard.vines[type];
