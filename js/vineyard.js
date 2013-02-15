@@ -302,9 +302,16 @@ var Vineyard = (function () {
     
   var Vine_Skin = Bloom.Flower.subclass('Vine_Skin', {
     block: 'vine-skin',
-    initialize: function() {            
+    initialize: function() {           
       var label = this.element.find('label');
-      label.text(Vine.pretty_name(this.seed.name));
+      if (this.seed.property.label === false
+        || this.seed.property.label === null) {
+        label.remove();
+      }
+      else {
+        label.text(Vine.pretty_name(this.seed.name));
+      }
+        
       this.element.addClass(this.seed.property.type);
       this.append(this.seed);
     }
@@ -325,6 +332,31 @@ var Vineyard = (function () {
         if (self.type == 'double')
           value = parseFloat(value);
         
+        Vine.update_seed(self, value);
+      });
+      
+      this.input = input;
+    },
+    get_text_element: function() {
+      return this.element.find('input');
+    },
+    update_element: function(value) {
+      this.input.val(value);
+    }
+  });
+  
+  var Checkbox_Vine = Vine.subclass('Checkbox_Vine', {
+    block: 'checkbox-vine',
+    initialize: function() {
+      var self = this, input = this.element;
+      
+      input.attr('name', this.name);
+      input.val(this.seed);
+      input.focus(function() {
+        input.select();
+      });
+      
+      Bloom.watch_input(input, function(value) {                
         Vine.update_seed(self, value);
       });
       
@@ -440,10 +472,11 @@ var Vineyard = (function () {
   
   Vineyard.properties.default_vine = String_Vine;
   Vineyard.properties.vines = {
+    "bool": Checkbox_Vine,
+    "list": List_Vine,
     "string": String_Vine,
     "text": Text_Vine,
-    "reference": Reference_Vine,
-    "list": List_Vine
+    "reference": Reference_Vine
   };
   
   /*
@@ -496,6 +529,16 @@ var Vineyard = (function () {
         return vineyard.vines[type];
       else
         return vineyard.default_vine;
+    },
+    sort_vines: function(type_info) {
+      var items = [];
+      for (var name in type_info.properties) {
+        items.push(type_info.properties[name]);
+      }
+      
+      return items.sort(function(x) {
+        return x.weight || 0;
+      });
     }
   });  
   
