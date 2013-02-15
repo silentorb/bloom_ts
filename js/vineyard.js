@@ -513,9 +513,9 @@ var Vineyard = (function () {
     generate_vines: function(seed, type_info) {      
       this.list.empty();
       
-      for (var name in type_info.properties) {
-        var property = type_info.properties[name];
-        // if (Meta_Object.has_property(seed, name) && 
+      var properties = Arbor.sort_vines(type_info.properties);
+      for (var i = 0; i < properties.length; i++) {
+        var property = properties[i];
         if (!property.readonly && property.visible !== false) {
           var control = this.create_vine(seed, property);
           var skin = Vine_Skin.create(control);
@@ -529,18 +529,19 @@ var Vineyard = (function () {
         return vineyard.vines[type];
       else
         return vineyard.default_vine;
-    },
-    sort_vines: function(type_info) {
-      var items = [];
-      for (var name in type_info.properties) {
-        items.push(type_info.properties[name]);
-      }
-      
-      return items.sort(function(x) {
-        return x.weight || 0;
-      });
     }
   });  
+  
+  Arbor.sort_vines = function(properties) {
+    var items = [];
+    for (var name in properties) {
+      items.push(properties[name]);
+    }
+    return items.sort(function(a, b) {
+//      console.log(x.name, x.weight || 0);
+      return (a.weight || 0) - (b.weight || 0);
+    });
+  }
   
   Vineyard.import_all = function() {
     MetaHub.extend(MetaHub.Global, Vineyard.classes);
