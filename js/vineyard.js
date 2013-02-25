@@ -119,7 +119,8 @@ var Vineyard = (function () {
             seed.optimize_getter(name, property.target_trellis.name);
             if (list && list.length) {
               for (var i = 0; i < list.length; i++) {
-                var child = list[i] = Seed.create(list[i], property.target_trellis);
+                //var child = list[i] = Seed.create(list[i], property.target_trellis);
+                var child = list[i] = property.target_trellis.create_seed(list[i]);
                 child.connect(seed, 'parent', property.target_trellis.name);
               }
             }
@@ -132,6 +133,7 @@ var Vineyard = (function () {
         }
       }
       
+      this.invoke('create-seed', seed, this);
       return seed;
     }
   });
@@ -141,10 +143,16 @@ var Vineyard = (function () {
     get_url: function(type, parameters) {
       var garden = this.trellis.vineyard.garden;
       var channel = garden.irrigation.get_channel(type, this);
-      return Bloom.join(garden.app_path, channel, this.trellis.name, this.data.id) + Bloom.render_query(parameters);
+      var trellis = garden.irrigation.get_trellis(this.trellis.name);
+      return Bloom.join(garden.app_path, channel, trellis, this.data.id) + Bloom.render_query(parameters);
     },
     initialize: function(source, trellis) {
       source = source || {};
+      if (typeof source != 'object')
+        source = {
+          id: source
+        };
+      
       this.data = {};
       MetaHub.extend(this.data, source);
       this.trellis = trellis;
@@ -309,7 +317,10 @@ var Vineyard = (function () {
         label.remove();
       }
       else {
-        label.text(Vine.pretty_name(this.seed.name));
+        if (this.seed.property.label !== undefined)
+          label.text(Vine.pretty_name(this.seed.property.label));
+        else
+          label.text(Vine.pretty_name(this.seed.name));
       }
         
       this.element.addClass(this.seed.property.type);
@@ -381,6 +392,9 @@ var Vineyard = (function () {
     block: 'reference-vine',
     initialize: function() {
       var self = this;
+      if (!this.seed)
+        return;
+      
       Bloom.get(self.seed.get_url('seed'), function(response) {
         var select = Bloom.Combo_Box.create(response.objects);
         self.append(select);
@@ -493,15 +507,21 @@ var Vineyard = (function () {
       this.list = List.create(list_element);
       if (!this.seed)
         return;
-            
-      var options = this.seed;
-      this.seed = options.seed;
-      this.trellis = options.trellis;
+      
+      if (this.seed.meta_source === Seed) {
+        this.trellis = this.seed.trellis;
+      }
+      else {
+        var options = this.seed;
+        this.seed = options.seed;
+        this.trellis = options.trellis;
+      }
+      
       this.vineyard = this.trellis.vineyard;      
       this.generate_vines(this.seed, this.trellis);
     },
     create_vine: function(seed, property) {
-      var control_type = this.get_vine_type(property.type);
+      var control_type = this.get_vine_type(property);
       var control = control_type.create({
         owner: seed,
         property: property,
@@ -510,7 +530,7 @@ var Vineyard = (function () {
       
       return control;
     },
-    generate_vines: function(seed, type_info) {      
+    generate_vines: function(seed, type_info) {
       this.list.empty();
       
       var properties = Arbor.sort_vines(type_info.properties);
@@ -523,12 +543,29 @@ var Vineyard = (function () {
         }
       }
     },
-    get_vine_type: function(type) {
+    get_vine_type: function(property) {
+      var type = property.type;
       var vineyard = this.trellis.vineyard;
+      if (property.trellis && vineyard.vines[property.trellis])
+        return vineyard.vines[property.trellis];
+      
       if (vineyard.vines[type])
         return vineyard.vines[type];
       else
         return vineyard.default_vine;
+    },
+    seed_to_element: function(seed){
+      if (!this.element)
+        return;
+      
+      this.element.find('*[bind]').each(function() {
+        var element = $(this);
+        var bind = element.attr('bind');
+        if (seed.data.hasOwnProperty(bind)) {
+          var value = seed.data[bind];                     
+          Flower.set_value(element, value);
+        }
+      });    
     }
   });  
   
@@ -538,7 +575,7 @@ var Vineyard = (function () {
       items.push(properties[name]);
     }
     return items.sort(function(a, b) {
-//      console.log(x.name, x.weight || 0);
+      //      console.log(x.name, x.weight || 0);
       return (a.weight || 0) - (b.weight || 0);
     });
   }
