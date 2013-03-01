@@ -1,5 +1,5 @@
 {
-  "classes": {
+  "trellises": {
     "object": {
       "properties": {
         "id": {
@@ -23,16 +23,13 @@
         },
         "characters": {
           "type": "list",
-          "reference_class": "character"
+          "trellis": "character"
         }
       }
     },
     "character": {
       "parent": "object",
       "properties": {
-        "id": {
-          "type": "int"
-        },
         "gender": {
           "type": "string"           
         },
@@ -41,7 +38,7 @@
         },
         "books": {
           "type": "list",
-          "reference_class": "book"
+          "trellis": "book"
         }
       }
     }

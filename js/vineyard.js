@@ -2,23 +2,25 @@ var Vineyard = (function () {
   var Vineyard = Meta_Object.subclass('Framework', {
     trellises: {},
     vines: {},
+    views: {},
     meta_objects: {},
     default_arbor: null,
     initialize: function(middle_data, bloom_data) {
       var x, trellis;
 
       // Merge client specific settings into the main schema.
-      for (x in bloom_data) {
-        if (middle_data[x]) {
-          this.extend_trellis(middle_data[x], bloom_data[x]);
-        }
-      }
-      
+      //      for (x in bloom_data) {
+      //        if (middle_data[x]) {
+      //          this.extend_trellis(middle_data[x], bloom_data[x]);
+      //        }
+      //      }
+      //      
+      this.views = bloom_data;
+
       for (x in middle_data) {
         trellis = Trellis.create(x, middle_data[x], this);        
         this.trellises[x] = trellis;
       }
-      
       for (x in this.trellises) {
         this.trellises[x].initialize_properties();
       }
@@ -90,35 +92,59 @@ var Vineyard = (function () {
       }
     },
     create_seed: function(source) {
-      // Here source and item stay pointing at the same object
-      // but I want to distinguish between them because
-      // that might not be the case with all Trellises.
-      var property, seed = Seed.create(source, this), data = seed.data;
+      var i, seed, property;
+      if (source) {
+        var id = source.id || source;
+        
+        var seeds = this.get_connections('seed');
+        for (i = 0; i < seeds.length; i++) {
+          seed = seeds[i];
+          if (seed.id == id) {
+            return seed;
+          }
+        }
+      }
+      seed = Seed.create(source, this);
+      this.populate_seed(seed, source);
+   //   seed.connect(this, 'trellis', 'seed');
+      
+      this.invoke('create-seed', seed, this);
+      return seed;
+    },
+    populate_seed: function(seed, source) {
+      var property, i;
+      source = source || {};
       for (var p in this.properties) {
         property = this.properties[p];
         var name = property.name;
 
-        if (this.primary_key != name) {
-          if (data[name] === undefined) {
+        if (this.primary_key == name) {
+          seed[name] = source[name];
+        }
+        else {
+          if (source[name] === undefined) {
             if (property.insert_trellis) {
-              data[name] = this.name;
+              seed[name] = this.name;
             }
             else {
               var default_value = Vineyard.default_values[property.type];
               if (typeof default_value == 'function') {
-                data[name] = default_value(seed, property);
+                seed[name] = default_value(seed, property);
               }
               else if (default_value !== undefined) {
-                data[name] = default_value;
+                seed[name] = default_value;
               }
             }
           }
           else if (property.type == 'list') {
-            var list = data[name];
-            delete data[name];
-            seed.optimize_getter(name, property.target_trellis.name);
+            var list = source[name];
+            
+            // Check if property already exists so it isn't added multiple times
+            if (typeof seed[name] !== 'object')
+              seed.optimize_getter(name, property.target_trellis.name);
+            
             if (list && list.length) {
-              for (var i = 0; i < list.length; i++) {
+              for (i = 0; i < list.length; i++) {
                 //var child = list[i] = Seed.create(list[i], property.target_trellis);
                 var child = list[i] = property.target_trellis.create_seed(list[i]);
                 child.connect(seed, 'parent', property.target_trellis.name);
@@ -126,26 +152,35 @@ var Vineyard = (function () {
             }
           }
           else if (property.type == 'reference') {
-            data[name] = Seed.create(data[name], property.target_trellis);
-          // Not yet implemented
-          //            delete item[name];  
+            if (seed[name] && seed[name].id == source[name])
+              continue;
+            
+            if (!source[name])
+              continue;
+            
+            seed[name] =  property.target_trellis.create_seed(source[name]);
+          }
+          else {
+            if (typeof source[name] !== 'undefined')
+              seed[name] = source[name];
           }
         }
       }
-      
-      this.invoke('create-seed', seed, this);
-      return seed;
     }
   });
 
   var Seed = Meta_Object.subclass('Seed', {
     deleted: {},
-    get_url: function(type, parameters) {
+    get_url: function(type, action, parameters) {
       var garden = this.trellis.vineyard.garden;
-      var channel = garden.irrigation.get_channel(type, this);
-      var trellis = garden.irrigation.get_trellis(this.trellis.name);
-      return Bloom.join(garden.app_path, channel, trellis, this.data.id) + Bloom.render_query(parameters);
+      return garden.irrigation.get_url(type, this.trellis.name, this.id, action, parameters);
     },
+    //    get_url: function(type, parameters) {
+    //      var garden = this.trellis.vineyard.garden;
+    //      var channel = garden.irrigation.get_channel(type, this);
+    //      var trellis = garden.irrigation.get_trellis(this.trellis.name);
+    //      return Bloom.join(garden.app_path, channel, trellis, this.id) + Bloom.render_query(parameters);
+    //    },
     initialize: function(source, trellis) {
       source = source || {};
       if (typeof source != 'object')
@@ -153,10 +188,10 @@ var Vineyard = (function () {
           id: source
         };
       
-      this.data = {};
-      MetaHub.extend(this.data, source);
+      //MetaHub.extend(this, source);
       this.trellis = trellis;
-      this.listen(this, 'connect', this.on_child_connect);
+      this.value = Meta_Object.value;
+      this.listen(this, 'connect.child', this.on_child_connect);
     },
     on_child_connect: function(child, type) {
       this.listen(child, 'delete', function(child) {
@@ -164,19 +199,6 @@ var Vineyard = (function () {
           this.deleted[type] = [];
         
         this.deleted[type].push(child);
-      });
-    },
-    // Modified to point to the data member.
-    optimize_getter: function(property_name, connection_name) {    
-      var array = [];
-      this.data[property_name] = array;
-          
-      this.listen(this, 'connect.' + connection_name, function(item) {
-        array.push(item);
-      });
-
-      this.listen(this, 'disconnect.' + connection_name, function(item) {
-        Array.remove(array, item);
       });
     },
     plant: function() {
@@ -214,25 +236,15 @@ var Vineyard = (function () {
       var data = {
         objects: [ item ]
       };
-      Bloom.post(this.trellis.vineyard.update_url + '?XDEBUG_SESSION_START=netbeans-xdebug', data, function(response) {
+      
+      var url = this.trellis.vineyard.garden.irrigation.get_plant_url() + Bloom.render_query({ 'XDEBUG_SESSION_START': 'netbeans-xdebug'});
+      Bloom.post(url, data, function(response) {
         if (response.success && Bloom.output) {
           Bloom.output({
             message: 'Saved.'
           });
         }
       });
-    },
-    // Modified to point to the data member.
-    value: function(name, value, source) {
-      var data = this.data;
-      if (value === undefined || value === data[name])
-        return data[name];
-      
-      var old_value = data[name]
-      data[name] = value;
-      Meta_Object.invoke_binding(source, this, 'change.' + name, value, old_value);
-      Meta_Object.invoke_binding(source, this, 'change', name, value, old_value);
-      return value;
     }
   });
 
@@ -317,10 +329,10 @@ var Vineyard = (function () {
         label.remove();
       }
       else {
-        if (this.seed.property.label !== undefined)
-          label.text(Vine.pretty_name(this.seed.property.label));
+        if (this.seed.property.label === undefined)
+          label.text(Vine.pretty_name(this.seed.property.name));
         else
-          label.text(Vine.pretty_name(this.seed.name));
+          label.text(this.seed.property.label);
       }
         
       this.element.addClass(this.seed.property.type);
@@ -515,6 +527,14 @@ var Vineyard = (function () {
         var options = this.seed;
         this.seed = options.seed;
         this.trellis = options.trellis;
+        if (options.view) {
+          this.view = options.view;
+        }
+        else if (options.view !== false) {
+          if (this.trellis.vineyard.views[this.trellis.name]) {
+            this.view = this.trellis.vineyard.views[this.trellis.name];
+          }
+        }
       }
       
       this.vineyard = this.trellis.vineyard;      
@@ -535,13 +555,29 @@ var Vineyard = (function () {
       
       var properties = Arbor.sort_vines(type_info.properties);
       for (var i = 0; i < properties.length; i++) {
-        var property = properties[i];
+        // In explicit mode original properties are not shown if they aren't also defined in the view.
+        if (this.view && this.view.explicit && !this.view.properties[properties[i].name])
+          continue;
+        
+        var property = this.get_view_property(properties[i]);
         if (!property.readonly && property.visible !== false) {
           var control = this.create_vine(seed, property);
           var skin = Vine_Skin.create(control);
           this.list.connect(skin, 'child', 'parent');          
         }
       }
+    },
+    get_view_property: function(original_property) {
+      if (!this.view)
+        return original_property;
+      
+      if (this.view.properties[original_property.name]) {
+        var property = MetaHub.extend({}, original_property);
+        MetaHub.extend(property, this.view.properties[original_property.name]);
+        return property;
+      }
+      
+      return original_property;
     },
     get_vine_type: function(property) {
       var type = property.type;
@@ -561,8 +597,8 @@ var Vineyard = (function () {
       this.element.find('*[bind]').each(function() {
         var element = $(this);
         var bind = element.attr('bind');
-        if (seed.data.hasOwnProperty(bind)) {
-          var value = seed.data[bind];                     
+        if (seed.hasOwnProperty(bind)) {
+          var value = seed[bind];                     
           Flower.set_value(element, value);
         }
       });    

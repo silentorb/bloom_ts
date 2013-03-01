@@ -4,18 +4,18 @@
  * Christopher W. Johnson
  * Copyright 2012 Silent Orb
  */
-var Bloom = (function () {
+var Bloom = (function() {
   'use strict';
   var Bloom = {
     version: '1.3.0'
   };
-  
-  MetaHub.import_all(); 
+
+  MetaHub.import_all();
   MetaHub.current_module = Bloom;
-  
+
   var Mulch = {
     dirt: {},
-    add: function(type, names, fertilizer) {
+    add: function(type, names, fertilizer, url) {
       // This may change down the road, but currently fertilize() can be called
       // multiple times.  Because of that, Mulch prevents overwriting of dirt types
       // or there would be redundant calls to the server.  If two scripts are
@@ -23,11 +23,12 @@ var Bloom = (function () {
       // dirt between themselves, Mulch isn't going to manage it.
       if (Mulch.dirt[type])
         return;
-      
+
       Mulch.dirt[type] = {
         fertilizer: fertilizer,
         tilled: false,
-        names: names
+        names: names,
+        url: url
       };
     },
     // Originally this simply took a function, but that has been deprecated
@@ -40,24 +41,35 @@ var Bloom = (function () {
         if (pile) {
           for (var i in pile) {
             var dirt = pile[i];
-            Mulch.add(i, dirt.handfulls, dirt.fertilizer);    
+            Mulch.add(i, dirt.handfulls, dirt.fertilizer, dirt.url);
           }
         }
       }
-      
+
       // A valid callback is required because otherwise Mulch is pointless.
       if (typeof onfinished != 'function')
         throw new Error('Mulch.fertilize() requires a callback function.');
-      
+
       Mulch.load_finished = onfinished;
       for (var type in Mulch.dirt) {
         if (Mulch.tilled)
           continue;
         var dirt = Mulch.dirt[type];
-        for (var x = 0; x < dirt.names.length; x++) {
-          dirt.fertilizer(dirt.names[x]);
+        if (dirt.url) {
+          Mulch.fertilize_handful(type, dirt);
+        }
+        else {
+          for (var x = 0; x < dirt.names.length; x++) {
+            dirt.fertilizer(dirt.names[x]);
+          }
         }
       }
+    },
+    fertilize_handful: function(type, dirt) {
+      jQuery.get(dirt.url, function(response) {
+        dirt.fertilizer(response, dirt.names[0]);
+        Mulch.till(type,  dirt.names[0]);
+      }, 'text');
     },
     till: function(type, name) {
       var dirt = Mulch.dirt[type];
@@ -79,13 +91,13 @@ var Bloom = (function () {
         if (Mulch.dirt[x].names.length > 0)
           return false;
       }
-    
+
       return true;
     }
   };
   Bloom.Ground = Mulch;
   Bloom.Mulch = Mulch;
-  
+
   function Block(name, html) {
     this.name = name;
     Block.library[name] = this;
@@ -95,29 +107,29 @@ var Bloom = (function () {
       this.html = '';
   }
   Bloom.Block = Block;
-  
+
   Block.library = {}
   Block.default_extension = '.html';
   Block.source_path = "";
   Block.use_alert = false;
-      
-  Block.load = function (name, onload) {
+
+  Block.load = function(name, onload) {
     var block = Block.library[name];
-    
+
     if (!block) {
       block = new Block(name);
       block.queue = [];
       var url = name + Block.default_extension
       if (Block.source_path.length > 0)
         url = Block.source_path + "/" + url;
-      
+
       jQuery.ajax({
         url: url,
         success: function(seed) {
           block.html = seed;
           for (var x = 0; x < block.queue.length; x++) {
             block.queue[x](block);
-          }   
+          }
           delete block.queue;
           Mulch.till('block', name);
         },
@@ -131,7 +143,7 @@ var Bloom = (function () {
           Mulch.till('block', name);
         }
       });
-      
+
       if (typeof onload == 'function') {
         block.queue.push(onload);
       }
@@ -144,32 +156,17 @@ var Bloom = (function () {
         onload(block);
         return;
       }
-    }      
+    }
   }
 
-  Block.load_library = function (name, onload) {
+  Block.load_library = function(name, onload) {
     var url = name + Block.default_extension
     if (Block.source_path.length > 0)
       url = Block.source_path + "/" + url;
     jQuery.ajax({
       url: url,
       success: function(seed) {
-        var data = $(seed);
-        data.children().each(function() {
-          var child = $(this);
-          var id = child.attr('name');
-          if (id)
-            child.removeAttr('name')
-          else
-            id = child.attr('id');
-            
-          if (id) {
-            new Block(id, this.outerHTML);
-          }
-          else {
-            console.log('Block was missing name or id attribute');
-          }
-        });
+        Block.load_library_from_string(seed);
         Mulch.till('blocks', name);
       },
       error: function(jqXHR, text, error) {
@@ -181,66 +178,83 @@ var Bloom = (function () {
         Mulch.till('block', name);
       }
     });
-      
+
     if (typeof onload == 'function') {
       block.queue.push(onload);
     }
-       
   }
-  
+
+  Block.load_library_from_string = function(text) {
+    var data = $(text);
+    data.children().each(function() {
+      var child = $(this);
+      var id = child.attr('name');
+      if (id)
+        child.removeAttr('name')
+      else
+        id = child.attr('id');
+
+      if (id) {
+        new Block(id, this.outerHTML);
+      }
+      else {
+        console.log('Block was missing name or id attribute');
+      }
+    });
+  }
+
   Block.render = function(name, seed) {
     return Block.library[name].render(seed);
   }
-   
+
   Block.prototype = {
     constructor: Block,
     name: '',
-    html: '', 
-
+    html: '',
     render: function(control) {
       var output = this.html;
-      
+
       output = output.replace(/@{([\W\w]*?)}(?=\s*(?:<|"))/gm, function(all, code) {
         var result = eval(code);
         if (typeof result === "undefined" || result == null)
           return '';
-      
+
         return result;
       });
-      
+
       var result = $(output);
       return result;
     }
   }
-  
+
   var Flower = Meta_Object.subclass('Flower', {
     initialize: function() {
-      
+
       for (var x = 0; x < arguments.length; ++x) {
         var argument = arguments[x];
         if (argument != null) {
-          if (typeof argument == 'string'){
+          if (typeof argument == 'string') {
             this.element = jQuery(argument);
           }
-          else if (typeof argument == 'function'){
+          else if (typeof argument == 'function') {
             this.__create_finished = argument;
           }
           else if (argument.jquery) {
             this.element = argument;
           }
           else if (typeof argument == 'object') {
-            if (typeof this.data_process == 'function' || typeof this.type.methods.data_process == 'function' )
+            if (typeof this.data_process == 'function' || typeof this.type.methods.data_process == 'function')
               this.seed = this.data_process(argument);
             else
               this.seed = argument;
-            
+
             if (this.seed.is_meta_object) {
               this.connect(this.seed, 'seed', 'flower');
             }
           }
         }
       }
-      
+
       if (!this.element && this.block) {
         // Don't pass onload to render() because if one was provided to create(), it will
         // be handled later.
@@ -249,7 +263,7 @@ var Bloom = (function () {
       else {
         this.source_to_element();
       }
-      
+
       this.listen(this, 'disconnect-all', function() {
         if (this.element) {
           this.element.remove();
@@ -263,23 +277,23 @@ var Bloom = (function () {
       //Block.load(this.block, function(block) {
       var block = Block.library[this.block];
       if (!block)
-        throw new Error ("Block '" + this.block + "' not found.");
-      
+        throw new Error("Block '" + this.block + "' not found.");
+
       self.element = block.render(self);
       if (self.element.length == 0) {
         throw new Error('self.element is empty!');
       }
       self.source_to_element();
       if (typeof onload == 'function')
-        onload(self);        
-    //});
+        onload(self);
+      //});
     },
     append: function(flower) {
       this.element.append(flower.element);
     },
     listen_to_element: function(event, method) {
       var self = this;
-      
+
       this.element.bind(event, function() {
         method.apply(self, arguments);
       })
@@ -293,7 +307,7 @@ var Bloom = (function () {
         method.apply(this, args);
       });
     },
-    plant: function(url) {      
+    plant: function(url) {
       jQuery.post(url, this.seed, function(response) {
         if (!response.result) {
           Bloom.output('There was a problem communicating with the server.');
@@ -303,26 +317,26 @@ var Bloom = (function () {
           this.invoke('plant.success', response);
         }
         else
-          this.invoke('plant.error', response);        
-      });    
+          this.invoke('plant.error', response);
+      });
     },
     click: function(action, meta_object) {
       if (!meta_object) {
         meta_object = this;
       }
       this.element.click(function(event) {
-        event.preventDefault();        
+        event.preventDefault();
         action.call(meta_object, event);
       });
     },
     drag: function(data) {
       var scope, element = this.element;
-      
+
       if (data.within_bounds)
         scope = element;
       else
         scope = $(document);
-      
+
       var mousemove = function(event) {
         data.moving.call(data.owner, event);
         event.preventDefault();
@@ -330,7 +344,7 @@ var Bloom = (function () {
       var mouseup = function(event) {
         event.bubbles = false;
         $(document).unbind('mouseup', mouseup);
-        scope.unbind('mousemove', mousemove);        
+        scope.unbind('mousemove', mousemove);
         if (typeof finished == 'function') {
           data.finished.call(data.owner, event);
         }
@@ -339,20 +353,20 @@ var Bloom = (function () {
         if (typeof data.can_move == 'function' && !data.can_move(event)) {
           return;
         }
-        
+
         scope.mousemove(mousemove);
         $(document).mouseup(mouseup);
         event.bubbles = false;
         event.preventDefault();
       });
     },
-    source_to_element: function(){
+    source_to_element: function() {
       if (!this.element)
         return;
-      
+
       var value;
       var self = this;
-      
+
       this.element.find('*[bind]').each(function() {
         var element = $(this);
         var bind = element.attr('bind');
@@ -361,15 +375,15 @@ var Bloom = (function () {
             value = self[bind].apply(self);
           }
           else {
-            value = self[bind]; 
+            value = self[bind];
           }
           Flower.set_value(element, value);
         }
-      });    
-      
+      });
+
       if (!this.seed)
         return;
-      
+
       for (var name in this.seed) {
         var element = this.element.find('#' + name + ', .' + name + ', [bind=' + name + '], [name=' + name + ']').first();
         if (element.length == 1) {
@@ -378,24 +392,24 @@ var Bloom = (function () {
             value = property.apply(this.seed);
           }
           else {
-            value = property; 
+            value = property;
           }
-          
+
           if (typeof value != 'object') {
             Flower.set_value(element, value);
           }
         }
-      }      
+      }
     },
-    element_to_source: function(){            
+    element_to_source: function() {
       for (var name in this.seed) {
         var element = this.element.find('#' + name + ', .' + name + ', [bind=' + name + ']').first();
-        if (element.length == 1) {          
+        if (element.length == 1) {
           if (typeof this.seed[name] != 'function' && Flower.is_input(element)) {
             this.seed[name] = element.val();
-          }          
+          }
         }
-      }      
+      }
     },
     empty: function() {
       this.disconnect_all('child');
@@ -406,7 +420,7 @@ var Bloom = (function () {
       this.listen(other, 'change', function(value) {
         Flower.set_value(element, value);
       });
-      
+
       Flower.set_value(element, other.value);
     },
     graft: function(other, property, selector) {
@@ -417,7 +431,7 @@ var Bloom = (function () {
       this.listen(other, 'change.' + property, function(value) {
         Flower.set_value(element, value);
       });
-      
+
       Flower.set_value(element, other[property]);
     },
     update: function(test) {
@@ -425,12 +439,12 @@ var Bloom = (function () {
       if (this.query == undefined) {
         return;
       }
-      
-      var query = this.query();      
+
+      var query = this.query();
       if (!query) {
         return;
       }
-      
+
       var wait, finished = false;
       if (Bloom.Wait_Animation) {
         setTimeout(function() {
@@ -447,16 +461,16 @@ var Bloom = (function () {
         finished = true;
         if (wait) {
           wait.element.remove();
-        }        
+        }
         var seed;
         if (self.seed_name == null || self.seed_name == '')
           seed = response;
         else
           seed = response[self.seed_name];
-        
+
         self.invoke('update', seed, response);
         if (test) {
-          start();  
+          start();
         }
       });
     },
@@ -465,13 +479,13 @@ var Bloom = (function () {
     // Name of the property of the query response that contains the actual object data.
     seed_name: 'seed'
   });
-    
+
   Flower.set_value = function(element, value) {
     if (Flower.is_input(element)) {
       if (element.attr('type') == 'checkbox') {
         if (value === true || value === 'true')
           element.attr('checked', 'checked');
-        else 
+        else
           element.removeAttr('checked');
       }
       else {
@@ -482,14 +496,14 @@ var Bloom = (function () {
       element.html(value);
     }
   };
-    
+
   Flower.is_input = function(element) {
     if (element.length == 0)
       return false;
     var name = element[0].nodeName.toLowerCase();
     return name == 'input' || name == 'select' || name == 'textarea';
   };
-  
+
   new Block('list', '<ul></ul>');
 
   var List = Flower.subclass('List', {
@@ -500,10 +514,10 @@ var Bloom = (function () {
     //    item_type: null,
     pager: null,
     empty_on_update: true,
-    initialize: function(){
+    initialize: function() {
       this.optimize_getter('children', 'child');
       this.listen(this, 'update', this.on_update);
-      this.listen(this, 'connect.child', this.child_connected);    
+      this.listen(this, 'connect.child', this.child_connected);
       this.listen(this, 'disconnect.child', this.remove_element);
       if (typeof this.seed == 'object') {
         // When a seed is a simple array or object, the flower is usually responsible
@@ -545,13 +559,13 @@ var Bloom = (function () {
       if (type == 'child' && this.contains_flower(other))
         return false;
     },
-    on_update: function(seed){
+    on_update: function(seed) {
       var self = this;
       // Catch it early
-      if(!this.element) {
-        throw Error('element is null!');  
+      if (!this.element) {
+        throw Error('element is null!');
       }
-      
+
       if (this.empty_on_update || !this.seed) {
         this.empty();
         this.seed = seed;
@@ -562,17 +576,17 @@ var Bloom = (function () {
 
       this.load(seed);
 
-    //      if (this.item_type && typeof this.item_type !== 'function') {
-    //        var block = this.item_type.get_instance_property('block');
-    //        if (block) {
-    //          Block.load(this.item_type.get_instance_property('block'), function() {
-    //            self.load();
-    //          });
-    //        }
-    //        else {
-    //          this.load(seed);
-    //        }
-    //      }
+      //      if (this.item_type && typeof this.item_type !== 'function') {
+      //        var block = this.item_type.get_instance_property('block');
+      //        if (block) {
+      //          Block.load(this.item_type.get_instance_property('block'), function() {
+      //            self.load();
+      //          });
+      //        }
+      //        else {
+      //          this.load(seed);
+      //        }
+      //      }
     },
     contains_flower: function(flower) {
       return this.element.has(flower.element[0]).length > 0;
@@ -582,7 +596,7 @@ var Bloom = (function () {
         this.selection = Meta_Object.create();
       else
         this.selection = selection;
-      
+
       for (var x = 0; x < this.children.length; x++) {
         List.make_item_selectable(this, this.children[x], selection);
       }
@@ -596,7 +610,7 @@ var Bloom = (function () {
       if (seed.is_meta_object) {
         var children = seed.get_connections('child');
         for (var x = 0; x < children.length; ++x) {
-          this.add_seed_child(children[x]);            
+          this.add_seed_child(children[x]);
         }
       }
       else if (Object.is_array(seed)) {
@@ -611,11 +625,11 @@ var Bloom = (function () {
       }
     },
     remove: function(item) {
-      if (item.element && item.element.parent() == this || 
-        (item.element.parent() && item.element.parent().parent() == this)) {
+      if (item.element && item.element.parent() == this ||
+              (item.element.parent() && item.element.parent().parent() == this)) {
         item.element.detach();
       }
-      this.disconnect(item);    
+      this.disconnect(item);
     },
     remove_element: function(item) {
       if (item.element) {
@@ -640,14 +654,14 @@ var Bloom = (function () {
       if (typeof child_name != 'string') {
         child_name = 'child';
       }
-      
+
       this.listen(this.seed, 'connect.' + child_name, function(item) {
         this.add_seed_child(item);
       });
-      
+
       this.listen(this.seed, 'disconnect.' + child_name, function(item) {
         var children = this.get_connections('child');
-        
+
         for (var x = 0; x < children.length; x++) {
           if (children[x].seed === item) {
             this.disconnect(children[x]);
@@ -655,42 +669,42 @@ var Bloom = (function () {
           }
         }
       });
-      
-      var children = this.seed.get_connections(child_name);      
+
+      var children = this.seed.get_connections(child_name);
       this.populate(children);
-      
+
       this.watching = this.seed;
     }
   });
-  
+
   List.make_item_selectable = function(list, item, selection) {
     item.click(function() {
       if (MetaHub.get_connection(item.seed, selection))
         return;
-        
+
       selection.disconnect_all('selected');
       selection.connect(item.seed, 'selected', 'selection');
     });
-    
+
     if (MetaHub.get_connection(item.seed, selection))
       item.element.addClass('selected');
-    
+
     list.listen(item.seed, 'connect.selection', function() {
       item.element.addClass('selected');
     });
-    
+
     list.listen(item.seed, 'disconnect.selection', function() {
       item.element.removeClass('selected');
     });
   };
- 
+
   var Combo_Box = Flower.subclass('Combo_Box', {
     name_property: 'name',
     initialize: function() {
       if (!this.element) {
         this.element = $('<select/>');
       }
-      
+
       this.populate();
     },
     get_index: function() {
@@ -707,19 +721,19 @@ var Bloom = (function () {
           index = item[value_property];
         else
           index = i;
-        
+
         this.element.append('<option value=' + index + '>' + item[this.name_property] + '</option>');
       }
-      
+
       if (this.seed.length > 0) {
         this.element.children().first().attr('selected', 'selected');
       }
-      
+
       this.element.change(function() {
-        var selection = self.get_selection();        
-        self.invoke('change', selection);        
+        var selection = self.get_selection();
+        self.invoke('change', selection);
       });
-      
+
       if (value)
         this.set_value(value);
     },
@@ -727,10 +741,10 @@ var Bloom = (function () {
       this.element.val(value);
     }
   });
-    
+
   var Tree = List.subclass('Tree', {
     initialize: function() {
-        
+
     },
     add_seed_child: function(seed) {
       var flower = this.item_type.create(seed);
@@ -742,23 +756,23 @@ var Bloom = (function () {
         for (var x = 0; x < children.length; x++) {
           var child_flower = this.add_seed_child(children[x]);
           sub_list.append(child_flower.element);
-        }      
+        }
       }
-      
+
       return flower;
     }
-  //    remove_element: function(item) {
-  //      if (item.element) {
-  //        if (item.element.parent()[0] == this.element[0]) {
-  //          item.element.detach();
-  //
-  //        } else if (item.element.parent() && item.element.parent().parent()[0] == this.element[0]) {
-  //          var temp = item.element.parent();
-  //          item.element.detach();
-  //          temp.remove();
-  //        }
-  //      }
-  //    }
+    //    remove_element: function(item) {
+    //      if (item.element) {
+    //        if (item.element.parent()[0] == this.element[0]) {
+    //          item.element.detach();
+    //
+    //        } else if (item.element.parent() && item.element.parent().parent()[0] == this.element[0]) {
+    //          var temp = item.element.parent();
+    //          item.element.detach();
+    //          temp.remove();
+    //        }
+    //      }
+    //    }
   });
 
   var Dialog_Old = Flower.subclass('Dialog_Old', {
@@ -777,8 +791,8 @@ var Bloom = (function () {
     initialize_form: function() {
       var self = this;
 
-      this.element.find('input[type=button], button').click(function(e){
-        e.preventDefault();        
+      this.element.find('input[type=button], button').click(function(e) {
+        e.preventDefault();
         var button = $(this);
         var action;
         if (button.attr('action'))
@@ -789,35 +803,35 @@ var Bloom = (function () {
           else
             action = button.val().toLowerCase();
         }
-        
+
         if (action == 'submit') {
           if (typeof self.validate == 'function') {
-            if (!self.validate())  {
+            if (!self.validate()) {
               return;
             }
           }
         }
-        
+
         if (action == 'cancel') {
           self.close();
         }
-        
+
         self.invoke(action);
         self.invoke('button');
       });
-      
-      this.listen(this, 'submit', function() {   
-        self.element_to_source();        
+
+      this.listen(this, 'submit', function() {
+        self.element_to_source();
         self.close();
       });
 
-      this.listen(this, 'update', function(seed) {                     
+      this.listen(this, 'update', function(seed) {
         if (!self.active) {
-          self.show();         
+          self.show();
           self.active = true;
-        }    
+        }
       });
-      
+
       this.options = {
         title: this.title,
         width: this.width,
@@ -829,7 +843,7 @@ var Bloom = (function () {
           // This is going to cause problems down the line and should eventually be done differently.
           $(window).unbind();
           self.invoke('close');
-        }     
+        }
       };
     },
     bind_output: function(element, action) {
@@ -845,24 +859,25 @@ var Bloom = (function () {
 
       if (this.element.parent().length == 0)
         jQuery('body').append(this.element);
-      
+
       this.dialog = this.element.dialog(this.options);
-      
+
       $(window).keydown(function(event) {
         if (event.keyCode == 13) {
           event.preventDefault();
           return false;
         }
       });
-      
+
       this.invoke('show');
     },
-    close: function(){
+    close: function() {
       if (this.modal)
-        this.dialog.dialog('close');        
+        this.dialog.dialog('close');
     },
-    query: function() {}
-  
+    query: function() {
+    }
+
   });
 
   var Dialog = Flower.subclass('Dialog', {
@@ -887,15 +902,15 @@ var Bloom = (function () {
 
       if (!this.form) {
         this.form_type = form_type || this.form_type;
-        
+
         if (!this.form_type)
           return;
 
         this.form = this.form_type.create(this.seed);
       }
       this.element.find('.dialog-content').append(this.form.element);
-      this.element.find('input[type=button], button').click(function(e){
-        e.preventDefault();        
+      this.element.find('input[type=button], button').click(function(e) {
+        e.preventDefault();
         var button = $(this);
         var action;
         if (button.attr('action'))
@@ -906,58 +921,58 @@ var Bloom = (function () {
           else
             action = button.val().toLowerCase();
         }
-        
+
         if (action == 'submit') {
           if (typeof self.form.validate == 'function') {
-            if (!self.form.validate())  {
+            if (!self.form.validate()) {
               return;
             }
           }
-          
+
           if (self.form && typeof self.form.submit === 'function') {
-            self.element_to_source();        
-            self.form.submit(); 
-          }    
+            self.element_to_source();
+            self.form.submit();
+          }
         }
-        
+
         if (action == 'cancel') {
           self.close();
         }
-        
+
         self.invoke(action);
         self.invoke('button');
         self.form.invoke('button');
       });
-      
+
       this.listen(self.form, 'finish', function() {
         self.close();
       });
 
-      this.listen(this, 'update', function(seed) {                     
+      this.listen(this, 'update', function(seed) {
         if (!self.active) {
-          self.show();         
+          self.show();
           self.active = true;
-        }    
+        }
       });
-      
+
       this.element.find('.ui-dialog-titlebar-close').click(function(e) {
         e.preventDefault();
         self.close();
       });
-    /*
-      this.options = {
-        title: this.title,
-        width: this.width,
-        height: this.height,
-        modal: true,
-        resizable: this.resizable,
-        close: function() {
-          self.element.remove();
-          // This is going to cause problems down the line and should eventually be done differently.
-          $(window).unbind();
-          self.invoke('close');
-        }     
-      };*/
+      /*
+       this.options = {
+       title: this.title,
+       width: this.width,
+       height: this.height,
+       modal: true,
+       resizable: this.resizable,
+       close: function() {
+       self.element.remove();
+       // This is going to cause problems down the line and should eventually be done differently.
+       $(window).unbind();
+       self.invoke('close');
+       }     
+       };*/
     },
     close: function() {
       this.invoke('close');
@@ -966,26 +981,26 @@ var Bloom = (function () {
       if (this.backMulch) {
         this.backMulch.remove();
         delete this.backMulch;
-      }      
+      }
     },
     show: function() {
       if (Block.library['disabled-backMulch']) {
         this.backMulch = $(Block.library['disabled-backMulch'].html);
-        $('body').append(this.backMulch);  
+        $('body').append(this.backMulch);
       }
-      
+
       jQuery('body').append(this.element);
-      
+
       this.element.find('.ui-dialog-title').text(this.title);
       this.update_horizontal();
-      
+
       $(window).keydown(function(event) {
         if (event.keyCode == 13) {
           event.preventDefault();
           return false;
         }
       });
-      
+
       this.invoke('show');
     },
     update_horizontal: function() {
@@ -993,7 +1008,7 @@ var Bloom = (function () {
       if (this.width) {
         this.element.width(this.width);
       }
-      
+
       var scroll_top = view.scrollTop();
       var offset = {
         left: (view.width() - this.element.width()) / 2,
@@ -1002,17 +1017,17 @@ var Bloom = (function () {
       this.element.offset(offset);
     }
   });
-  
+
   Dialog.form = function(type, seed) {
     var dialog = Dialog.create(seed);
     dialog.initialize_form(type);
     return dialog;
   };
-  
+
   var Pager = Flower.subclass('Pager', {
     block: 'pager',
     page: 0,
-    rows:10,
+    rows: 10,
     page_size: 5,
     text_filter: '',
     list: null,
@@ -1021,73 +1036,73 @@ var Bloom = (function () {
       this.list = list;
       this.connect(list, 'list', 'pager');
       this.listen(this, 'update', this.on_update);
-      
+
       this.prev = this.element.find('.prev');
       this.prev.click(function() {
         if (!self.at_beginning()) {
           --self.page;
           list.update();
-        }        
+        }
       });
-      
+
       this.next = this.element.find('.next');
       this.next.click(function() {
         if (!self.at_end()) {
           ++self.page;
           list.update();
-        }        
-      });    
-      
+        }
+      });
+
       this.filter = this.element.find('.filter');
       this.filter.change(function() {
         self.text_filter = $(this).val();
         list.update();
       });
-      
+
       Bloom.watch_input(this.filter, function(e) {
         //   if (e.keyCode == 13) {
         self.text_filter = $(this).val();
         self.page = 0;
-        list.update();     
-      //  }
-      });    
-      
+        list.update();
+        //  }
+      });
+
       this.listen(list, 'update', function(seed, response) {
         this.rows = response.total;
         if (this.at_beginning())
           this.prev.fadeTo(100, 0.3);
         else
           this.prev.fadeTo(100, 1);
-        
+
         if (this.at_end())
           this.next.fadeTo(100, 0.3);
         else
           this.next.fadeTo(100, 1);
-        
+
         this.invoke('has-total', this.rows);
       });
 
       this.prev.fadeTo(0, 0);
-      this.next.fadeTo(0, 0);      
+      this.next.fadeTo(0, 0);
     },
     query: function() {
       return "&offset=" + (this.page * this.page_size) + "&limit=" + this.page_size;
     },
-    at_beginning: function(){
+    at_beginning: function() {
       return this.page <= 0;
     },
-    at_end: function(){
+    at_end: function() {
       return this.page >= Math.round(this.rows / this.page_size)
     }
   });
-  
+
   var More = Meta_Object.subclass('More', {
     limit: 5,
     initialize: function(list, link_element, limit) {
       this.limit = limit || this.limit;
-      this.connect(list, 'list', 'pager');      
+      this.connect(list, 'list', 'pager');
       list.pager = this;
-      
+
       // If you don't provide a link_element, this simply acts as a limiter
       if (link_element) {
         this.link = link_element;
@@ -1095,7 +1110,7 @@ var Bloom = (function () {
           e.preventDefault();
           list.update();
         });
-      
+
         this.listen(list, 'update', function(seed, response) {
           if (list.seed.length >= response.total)
             link_element.remove();
@@ -1112,31 +1127,31 @@ var Bloom = (function () {
       return result;
     }
   });
-  
+
   var Confirmation_Dialog = Dialog_Old.subclass('Confirmation_Dialog', {
     block: 'confirmation',
     height: 200,
-    initialize: function(){
+    initialize: function() {
       this.listen(this, 'button', function() {
         this.close();
       });
     }
   });
-  
+
   var Alert_Dialog = Dialog_Old.subclass('Alert_Dialog', {
     block: 'alert',
     height: 200,
-    initialize: function(){
+    initialize: function() {
       this.listen(this, 'button', function() {
         this.close();
       });
     }
   });
-  
+
   var Popup = Flower.subclass('Popup', {
     initialize: function() {
       var self = this;
-      this.close = function() {        
+      this.close = function() {
         $(window).unbind('click', self.close);
         self.element.parent().animate({
           'height': self.original_parent_height
@@ -1145,7 +1160,7 @@ var Bloom = (function () {
           self.disconnect_all();
           Popup.current = null;
         });
-        
+
       }
     },
     show: function(parent) {
@@ -1156,12 +1171,12 @@ var Bloom = (function () {
           return;
         }
       }
-      
+
       // Set a delay so that this hook isn't active until after it has finished propagating.
       setTimeout(function() {
         $(window).click(self.close);
       }, 1);
-      
+
       Popup.current = this;
       if (parent == undefined) {
         $('body').append(this.element);
@@ -1176,7 +1191,7 @@ var Bloom = (function () {
           'height': this.target_height
         }, 300);
         this.parent = parent;
-      }      
+      }
     }
   });
 
@@ -1186,8 +1201,8 @@ var Bloom = (function () {
     initialize: function() {
       this.tab_panel = List.create(this.element.find('.tabs'));
       this.container = this.element.find('.container');
-      
-      this.listen(this, 'connect.child', function(item) {        
+
+      this.listen(this, 'connect.child', function(item) {
         var self = this;
         this.children.push(item);
         this.container.append(item.element);
@@ -1195,22 +1210,22 @@ var Bloom = (function () {
         tab.click(function() {
           self.set_tab(item);
         });
-        
+
         this.tab_panel.element.append(tab.element);
         item.connect(tab, 'tab', 'panel');
-        
+
         if (!this.active_tab) {
           this.set_tab(item);
         }
         else {
-          item.element.hide(); 
+          item.element.hide();
         }
       });
-          
-      this.listen(this, 'disconnect.child', function(item) {          
+
+      this.listen(this, 'disconnect.child', function(item) {
         Array.remove(this.children, item);
         item.get_connection('tab').disconnect_all();
-        
+
         if (this.active_tab === item) {
           if (this.children.length == 0) {
             this.active_tab = null;
@@ -1219,32 +1234,32 @@ var Bloom = (function () {
             this.active_tab = this.children[0];
           }
         }
-        
+
       });
     },
     set_tab: function(item) {
       if (typeof item == 'number') {
         item = this.children[item];
       }
-      
+
       if (this.active_tab) {
         this.active_tab.element.hide();
         this.active_tab.get_connection('tab').element.removeClass('active');
       }
-      
+
       item.element.show();
       item.get_connection('tab').element.addClass('active');
       this.active_tab = item;
     }
   });
-  
+
   Bloom.import_members = Object.getOwnPropertyNames(Bloom);
   delete Bloom.import_members.extend;
-  
+
   Bloom.import_all = function() {
     MetaHub.extend(MetaHub.Global, Bloom, Bloom.import_members);
   }
-  
+
   return Bloom;
 })();
 
@@ -1255,7 +1270,7 @@ Bloom.alert = function(message, title) {
     title: title,
     message: message
   });
-    
+
   dialog.show();
 };
 
@@ -1267,32 +1282,32 @@ Bloom.join = function() {
       x = x.toString();
     else if (typeof x !== 'string' || x.length === 0)
       continue;
-  
+
     if (args.length > 0 && x[0] == '/') {
       x = x.substring(1);
     }
-    
+
     if (x.length === 0)
       continue;
-    
+
     args.push(x);
   }
-  
+
   for (var i = 0; i < args.length - 1; ++i) {
     var x = args[i];
     if (x[x.length - 1] == '/') {
       args[i] = x.substring(0, x.length - 1);
     }
   }
-  
+
   return args.join('/');
 }
-  
-Bloom.get = function (url, action, error, sync) {
+
+Bloom.get = function(url, action, error, sync) {
   if (Bloom.ajax_prefix) {
     url = Bloom.join(Bloom.ajax_prefix, url);
   }
-  
+
   var success = function(response) {
     try {
       var json = JSON.parse(response);
@@ -1304,20 +1319,26 @@ Bloom.get = function (url, action, error, sync) {
     if (json.success === false || json.success === 'false') {
       Bloom.output(json);
       if (typeof error == 'function') {
-        error(json, response); 
+        error(json, response);
       }
     }
     else {
       action(json);
-      
+
       if (typeof Bloom.output == 'function' && json && typeof json.message == 'string') {
         Bloom.output(json);
       }
     }
   };
 
-  console.log ('async', !sync);
+  console.log('async', !sync);
 
+  if (window.TESTING) {
+    error = function(x, status, message) {
+      throw new Error(status + ': ' + message + ' for ' + url);
+    }
+  }
+  
   jQuery.ajax({
     type: 'GET',
     url: url,
@@ -1328,7 +1349,8 @@ Bloom.get = function (url, action, error, sync) {
   });
 };
 
-Bloom.output = function() {};
+Bloom.output = function() {
+};
 
 Bloom.post = function(url, seed, method, error) {
   if (method === undefined) {
@@ -1339,13 +1361,13 @@ Bloom.post = function(url, seed, method, error) {
   if (Bloom.ajax_prefix) {
     url = Bloom.ajax_prefix + url;
   }
-  
-  var success = function(response) {    
+
+  var success = function(response) {
     if ((response.result && response.result.toLowerCase() == 'success') || response.success) {
       if (method) {
         method(response);
       }
-    }      
+    }
 
     if (typeof Bloom.output == 'function') {
       Bloom.output(response);
@@ -1375,7 +1397,7 @@ Bloom.get_url_properties = function() {
     var items = window.location.search.slice(1).split(/[\&=]/);
     if (items.length < 2)
       return {};
-    
+
     result = window.result = {};
     for (var x = 0; x < items.length; x += 2) {
       result[items[x]] = decodeURIComponent(items[x + 1].replace(/\+/g, ' '));
@@ -1395,7 +1417,7 @@ Bloom.edit_text = function(element, finished) {
   var input = element.find('input');
   input.val(text);
   input.select();
-    
+
   var finish = function() {
     var value = input.val();
     element.text(value);
@@ -1403,7 +1425,7 @@ Bloom.edit_text = function(element, finished) {
       finished(value, element);
     }
   };
-    
+
   input.blur(finish);
   input.keypress(function(event) {
     event.bubbles = false;
@@ -1418,7 +1440,7 @@ Bloom.watch_input = function(input, action, delay) {
   if (!delay && delay !== 0)
     delay = 800;
   var timer = null;
-  
+
   var finished = function(event) {
     if (timer) {
       clearTimeout(timer);
@@ -1426,30 +1448,30 @@ Bloom.watch_input = function(input, action, delay) {
     }
     action(input.val(), event);
   }
-  
+
   input.change(
-    function(event) {
-      finished(event)
-    });
-  
+          function(event) {
+            finished(event)
+          });
+
   input.keypress(function(event) {
     // For browsers that fire keypress and keyup on backspace,
     // ensure only the keypress hook captures it to avoid double responses.
-    if (event.keyCode == 8) 
+    if (event.keyCode == 8)
       return;
-    
+
     if (event.keyCode == 13) {
       event.preventDefault();
       finished(event);
       return;
     }
-    
+
     if (timer) {
       clearTimeout(timer);
     }
     timer = setTimeout(finished, delay);
   });
-  
+
   // Chrome (possibly all of webkit?) doesn't fire keypress
   // on backspace, but it does fire keyup
   input.keyup(function(event) {
@@ -1464,15 +1486,15 @@ Bloom.watch_input = function(input, action, delay) {
 
 Bloom.bind_input = function(input, owner, name, source) {
   input.val(owner[name]);
-  
+
   Bloom.watch_input(input, function() {
     owner.value(name, input.val(), source);
   });
-  
+
   source.listen(owner, 'change.' + name, function(value) {
     input.val(value);
   });
-  
+
   input.focus(function() {
     input.select();
   });
@@ -1481,7 +1503,7 @@ Bloom.bind_input = function(input, owner, name, source) {
 Bloom.initialize_page = function(Page) {
   MetaHub.metanize(Page);
 
-  jQuery(function () {
+  jQuery(function() {
     if (window.UNIT_TEST == undefined) {
       var landscape_element = $('#garden-landscape');
       if (landscape_element.length) {
@@ -1507,10 +1529,10 @@ Bloom.render_query = function(parameters) {
   var query = '';
   MetaHub.extend(result, this.parameters);
   var glue = '?';
-  for (var x in result) {      
+  for (var x in result) {
     query += glue + x + '=' + result[x];
     var glue = '&';
   }
-    
+
   return query;
 }
