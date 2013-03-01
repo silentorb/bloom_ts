@@ -198,6 +198,10 @@ var Vineyard = (function () {
       this.value = Meta_Object.value;
       this.listen(this, 'connect.child', this.on_child_connect);
     },
+    _go: function(action, args) {
+      var url = this.get_url('page', action, args);
+      this.trellis.vineyard.garden.lightning(url);
+    },
     on_child_connect: function(child, type) {
       this.listen(child, 'delete', function(child) {
         if (!this.deleted[type])
@@ -206,7 +210,7 @@ var Vineyard = (function () {
         this.deleted[type].push(child);
       });
     },
-    plant: function() {
+    plant: function(silent) {
       var self = this;
       var property, name, type, item = {}, p;
       for (p in this.trellis.properties) {
@@ -248,11 +252,15 @@ var Vineyard = (function () {
       });
       Bloom.post(url, data, function(response) {
         if (response.success && Bloom.output) {
+          self.id = response.id;
+          
+          if (silent)
+            return;
+          
           Bloom.output({
             message: 'Saved.'
           });
           
-          self.id = response.id;
           self.trellis.vineyard.invoke('seed-updated', self);
         }
       });
@@ -404,6 +412,41 @@ var Vineyard = (function () {
     }
   });
   
+  var Date_Vine = Vine.subclass('Date_Vine', {
+    block: 'string-vine',
+    initialize: function() {
+      var self = this, input = this.element;
+      
+      // Only add positive values
+      if (this.seed) {
+        var date = new Date(this.seed * 1000);
+        var date_string = (date.getMonth() + 1) + '/' + date.getDate() + '/' + date.getFullYear();
+        input.val(date_string);
+      }
+      Bloom.watch_input(input, function(value) {
+        if (value) {
+          var date = new Date(value);
+          value = date.getTime() / 1000;
+        }
+        
+        // skipping update_seed for now because it's throwing a timestamp into the field.
+        self.owner[self.name] = value;
+      });
+          
+      this.input = input;
+      
+      if (jQuery.datepicker) {
+        input.datepicker();
+      }
+    },
+    get_text_element: function() {
+      return this.element.find('input');
+    },
+    update_element: function(value) {
+      this.input.val(value);
+    }
+  });
+
   var Text_Vine = String_Vine.subclass('Text_Vine', {
     block: 'text-vine',
     get_text_element: function() {
@@ -513,7 +556,9 @@ var Vineyard = (function () {
     "list": List_Vine,
     "string": String_Vine,
     "text": Text_Vine,
-    "reference": Reference_Vine
+    "reference": Reference_Vine,
+    "date": Date_Vine,
+    "datetime": Date_Vine
   };
   
   /*

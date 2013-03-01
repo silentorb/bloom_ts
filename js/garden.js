@@ -7,7 +7,18 @@ var Edit_Arbor = Vineyard.Arbor.sub_class('Edit_Arbor', {
   initialize: function() {
     var self = this;
     this.element.find('input[type=submit], button[type=submit], #submit').click(function(e) {
+      e.preventDefault();
       self.seed.plant();
+    });
+    
+    this.element.find('#cancel, .cancel').click(function(e) {
+      e.preventDefault();
+      history.back();
+    });
+    
+    this.element.find('#delete, .delete').click(function(e) {
+      e.preventDefault();
+      
     });
   }
 });
@@ -42,6 +53,11 @@ var Content_Panel = Flower.sub_class('Content_Panel', {
       name = '*.' + trellis.name
       if (this.arbors[name])
         return this.arbors[name];
+      
+      // 'create' defaults to 'edit'.
+      if (action == 'create') {
+        return this.get_arbor(trellis, 'edit');
+      }
     }
     else if (this.arbors[trellis.name])
       return this.arbors[trellis.name];
@@ -148,7 +164,21 @@ var Garden = Meta_Object.subclass('Garden', {
     this.initialize_irrigation();
     this.request = this.irrigation.get_request();
 
-    self.invoke('initialize');
+    window.onpopstate = function(state) {
+      if (!state)
+        return;
+      
+      if (state.direction == 'forward')
+        Content_Panel.direction = 'back';
+      
+      if (state.direction == 'back')
+        Content_Panel.direction = 'forward';
+      
+      self.request = self.irrigation.get_request();
+      self.process_request(self.request);
+    }
+    
+    this.invoke('initialize');
   },
   initialize_query: function(query) {
     return query;
@@ -173,16 +203,22 @@ var Garden = Meta_Object.subclass('Garden', {
       self.invoke('edit', item);
     });
   },
-  lightning: function(trellis, action, args) {
-    var url;
+  lightning: function(url, silent) {
+    //    var url;
     
-    if (arguments.length < 2) {
-      url = trellis;
+    //    if (arguments.length < 2) {
+    //      url = trellis;
+    //    }
+    //    else {
+    //      url = Bloom.join(this.app_path, trellis.name, action) + Bloom.render_query(args);
+    //    }
+    if (!silent) {
+      history.pushState({
+        name: 'garden',
+        direction: Content_Panel.direction
+      }, '', url);
     }
-    else {
-      url = Bloom.join(this.app_path, trellis.name, action) + Bloom.render_query(args);
-    }
-    history.pushState({}, '', url);
+    
     this.clear_content();
     this.request = this.irrigation.get_request();
     this.process_request(this.request);
