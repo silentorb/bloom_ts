@@ -157,8 +157,17 @@ var Garden = Meta_Object.subclass('Garden', {
     var self = this;
     if (typeof trellis_name == 'object')
       trellis_name = trellis_name.name;
+    
+    if (typeof id == 'object') {
+      id = Bloom.render_query(id);
+    }
     var query = Bloom.join(this.app_path, 'vineyard', trellis_name, id);
     Bloom.get(query, function(response) {
+      if (!response.objects.length) {
+        console.log ('No objects found with query: ' + query);
+        return;
+      }
+        
       var item = self.vineyard.trellises[trellis_name].create_seed(response.objects[0]);
       self.content_panel.load_edit(item, self.request);
       self.invoke('edit', item);

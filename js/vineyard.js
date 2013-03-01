@@ -106,14 +106,19 @@ var Vineyard = (function () {
       }
       seed = Seed.create(source, this);
       this.populate_seed(seed, source);
-   //   seed.connect(this, 'trellis', 'seed');
+      //   seed.connect(this, 'trellis', 'seed');
       
       this.invoke('create-seed', seed, this);
       return seed;
     },
     populate_seed: function(seed, source) {
       var property, i;
-      source = source || {};
+      if (typeof source != 'object') {        
+        source = {
+          'id': source
+        };
+      }
+      
       for (var p in this.properties) {
         property = this.properties[p];
         var name = property.name;
@@ -202,6 +207,7 @@ var Vineyard = (function () {
       });
     },
     plant: function() {
+      var self = this;
       var property, name, type, item = {}, p;
       for (p in this.trellis.properties) {
         if (p == 'type')
@@ -237,12 +243,17 @@ var Vineyard = (function () {
         objects: [ item ]
       };
       
-      var url = this.trellis.vineyard.garden.irrigation.get_plant_url() + Bloom.render_query({ 'XDEBUG_SESSION_START': 'netbeans-xdebug'});
+      var url = this.trellis.vineyard.garden.irrigation.get_plant_url() + Bloom.render_query({
+        'XDEBUG_SESSION_START': 'netbeans-xdebug'
+      });
       Bloom.post(url, data, function(response) {
         if (response.success && Bloom.output) {
           Bloom.output({
             message: 'Saved.'
           });
+          
+          self.id = response.id;
+          self.trellis.vineyard.invoke('seed-updated', self);
         }
       });
     }

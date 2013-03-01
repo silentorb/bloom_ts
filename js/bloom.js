@@ -1390,10 +1390,10 @@ Bloom.get_url_property = function(name) {
 
 Bloom.get_url_properties = function() {
   var result;
-  if (window.result) {
-    result = window.result;
-  }
-  else {
+//  if (window.result) {
+//    result = window.result;
+//  }
+//  else {
     var items = window.location.search.slice(1).split(/[\&=]/);
     if (items.length < 2)
       return {};
@@ -1402,7 +1402,7 @@ Bloom.get_url_properties = function() {
     for (var x = 0; x < items.length; x += 2) {
       result[items[x]] = decodeURIComponent(items[x + 1].replace(/\+/g, ' '));
     }
-  }
+//  }
   return result;
 }
 
