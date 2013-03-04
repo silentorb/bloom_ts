@@ -56,8 +56,8 @@ var Vineyard = (function () {
   }
   
   /*
- *  Trellis = Table Schema
- */
+   *  Trellis = Table Schema
+   */
   var Trellis = Meta_Object.subclass('Trellis', {
     primary_key: 'id',
     initialize: function(name, source, vineyard) {
@@ -175,7 +175,7 @@ var Vineyard = (function () {
   });
 
   var Seed = Meta_Object.subclass('Seed', {
-    deleted: {},
+    _deleted: {},
     get_url: function(type, action, parameters) {
       var garden = this.trellis.vineyard.garden;
       return garden.irrigation.get_url(type, this.trellis.name, this.id, action, parameters);
@@ -196,13 +196,17 @@ var Vineyard = (function () {
       //MetaHub.extend(this, source);
       this.trellis = trellis;
       this.value = Meta_Object.value;
-      this.listen(this, 'connect.child', this.on_child_connect);
+      this.listen(this, 'connect.child', this._on_child_connect);
+    },
+    _delete: function(silent) {
+      this._deleted = true;
+      this.plant(silent);
     },
     _go: function(action, args) {
       var url = this.get_url('page', action, args);
       this.trellis.vineyard.garden.lightning(url);
     },
-    on_child_connect: function(child, type) {
+    _on_child_connect: function(child, type) {
       this.listen(child, 'delete', function(child) {
         if (!this.deleted[type])
           this.deleted[type] = [];
@@ -213,32 +217,40 @@ var Vineyard = (function () {
     plant: function(silent) {
       var self = this;
       var property, name, type, item = {}, p;
-      for (p in this.trellis.properties) {
-        if (p == 'type')
-          continue;
+      
+      if (this._deleted === true) {
+        var primary_key = this.trellis.primary_key;
+        item[primary_key] = this[primary_key];
+        item._deleted = true;
+      }
+      else {
+        for (p in this.trellis.properties) {
+          if (p == 'type')
+            continue;
         
-        property = this.trellis.properties[p];
-        name = property.name;
-        type = property.type;
-        var value = this.value(name);
+          property = this.trellis.properties[p];
+          name = property.name;
+          type = property.type;
+          var value = this.value(name);
         
-        if (value !== undefined && value !== null) {
-          if (type == 'list') {
-            item[name] = value.map(function(x) {
-              return x.id;
-            });
-            
-            if (value.deleted && value.deleted.length > 0) {
-              item[name + '_deleted'] = value.deleted.map(function(x) {
+          if (value !== undefined && value !== null) {
+            if (type == 'list') {
+              item[name] = value.map(function(x) {
                 return x.id;
               });
+            
+              if (value.deleted && value.deleted.length > 0) {
+                item[name + '_deleted'] = value.deleted.map(function(x) {
+                  return x.id;
+                });
+              }
             }
-          }
-          else if (type == 'reference') {
-            item[name] = value.id;
-          }
-          else {
-            item[name] = value;
+            else if (type == 'reference') {
+              item[name] = value[property.target_trellis.primary_key];
+            }
+            else {
+              item[name] = value;
+            }
           }
         }
       }
@@ -307,8 +319,8 @@ var Vineyard = (function () {
   });
 
   /*
-*  Vine = Form Field
-*/
+   *  Vine = Form Field
+   */
   var Vine = Bloom.Flower.subclass('Vine', {
     initialize: function() {
       var self = this, seed = this.seed;
@@ -362,7 +374,7 @@ var Vineyard = (function () {
   var String_Vine = Vine.subclass('String_Vine', {
     block: 'string-vine',
     initialize: function() {
-      var self = this, input = this.element;
+      var input = this.element;
       
       input.attr('name', this.name);
       input.val(this.seed);
@@ -370,17 +382,21 @@ var Vineyard = (function () {
         input.select();
       });
       
-      Bloom.watch_input(input, function(value) {
-        if (self.type == 'double')
-          value = parseFloat(value);
-        
-        Vine.update_seed(self, value);
-      });
+      this.watch_input();
       
       this.input = input;
     },
     get_text_element: function() {
       return this.element.find('input');
+    },
+    watch_input: function() {
+      var self = this;
+      Bloom.watch_input(this.element, function(value) {
+        if (self.type == 'double')
+          value = parseFloat(value);
+        
+        Vine.update_seed(self, value);
+      });
     },
     update_element: function(value) {
       this.input.val(value);
@@ -562,8 +578,8 @@ var Vineyard = (function () {
   };
   
   /*
-*  Arbor = FORM
-*/
+   *  Arbor = FORM
+   */
   var Arbor = Bloom.Flower.subclass('Arbor', {
     block: 'list',
     initialize: function() {
@@ -638,6 +654,9 @@ var Vineyard = (function () {
     get_vine_type: function(property) {
       var type = property.type;
       var vineyard = this.trellis.vineyard;
+      if (property.vine && vineyard.vines[property.vine])
+        return vineyard.vines[property.vine];
+      
       if (property.trellis && vineyard.vines[property.trellis])
         return vineyard.vines[property.trellis];
       

@@ -18,7 +18,21 @@ var Edit_Arbor = Vineyard.Arbor.sub_class('Edit_Arbor', {
     
     this.element.find('#delete, .delete').click(function(e) {
       e.preventDefault();
+      if (window.Confirmation_Dialog) {
+        var dialog = Confirmation_Dialog.create({
+          question: 'Are you sure you want to delete ' + self.seed.name + '?'
+        });
+        dialog.options.title = 'Delete ' + Vine.pretty_name(self.seed.trellis.name);
+
+        self.listen(dialog, 'yes', function() {
+          self.seed._delete();
+        });
       
+        dialog.show();
+      }
+      else {
+        self.seed._delete();
+      }
     });
   }
 });
