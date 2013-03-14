@@ -1,7 +1,7 @@
 var config = module.exports;
 
 config["Bloom tests"] = {
-  rootPath: "../",
+  rootPath: "../../",
   environment: "browser", // or "node"
   sources: [
   "extern/jquery-1.7.1.min.js",
@@ -9,10 +9,10 @@ config["Bloom tests"] = {
   "js/bloom.js",
   "js/vineyard.js",
   "js/garden.js",
-  "test/model.js"
+  "test/busterjs/model.js"
   ],
   tests: [
-  "test/*-test.js"
+  "test/busterjs/*-test.js"
   ]
 }
 

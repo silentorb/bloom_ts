@@ -65,16 +65,20 @@ var Vineyard = (function () {
       this.vineyard = vineyard;
       MetaHub.extend(this, source);      
       this.properties = {};
-      if (this.parent) {
-        // Convert string to object reference.
+            
+      // Add source properties after any possible parent properties.
+      MetaHub.extend(this.properties, source.properties);
+    },
+    initialize_properties: function() {
+      if (typeof this.parent === 'string') {
+        if (!this.vineyard.trellises[this.parent])
+          throw new Error('No Trellis exists for ' + this.name + ' parent: ' + this.parent + '.');
+        
+        // Convert string to object reference.        
         this.parent = this.vineyard.trellises[this.parent];
         MetaHub.extend(this.properties, this.parent.properties);
       }
       
-      // Add source properties after any possible parent properties.
-      MetaHub.extend(this.properties, source.properties);
-    },
-    initialize_properties: function() {            
       for (var p in this.properties) {
         var property = this.properties[p];
         property.name = p;
@@ -94,31 +98,51 @@ var Vineyard = (function () {
     create_seed: function(source) {
       var i, seed, property;
       if (source) {
-        var id = source.id || source;
-        
-        var seeds = this.get_connections('seed');
-        for (i = 0; i < seeds.length; i++) {
-          seed = seeds[i];
-          if (seed.id == id) {
+        if (typeof source != 'object') {
+          //var id = source.id || source;
+          var seed = this.get_seed_by_id(source);
+          if (seed)
+            return seed;
+        }
+        else if (source.id) {
+          var seed = this.get_seed_by_id(source.id);
+          if (seed) {
+            this.populate_seed(seed, source);
             return seed;
           }
         }
       }
       seed = Seed.create(source, this);
+      seed.connect(this, 'trellis', 'seed');
       this.populate_seed(seed, source);
-      //   seed.connect(this, 'trellis', 'seed');
-      
+    
       this.invoke('create-seed', seed, this);
       return seed;
+    },
+    get_seed_by_id: function(id) {
+      var i, seed, seeds = this.get_connections('seed');
+      for (i = 0; i < seeds.length; i++) {
+        seed = seeds[i];
+        if (seed.id == id) {
+          return seed;
+        }
+      }
+      
+      return null;
     },
     populate_seed: function(seed, source) {
       var property, i;
       if (typeof source != 'object') {        
-        source = {
-          'id': source
-        };
+        var key = source
+        source = {}
+        source[this.primary_key] = key;
       }
       
+      // Need to get id out of the way before dealing with
+      // any reference properties that could be pointing back
+      // at this seed.
+      seed[this.primary_key] = source[this.primary_key];
+
       for (var p in this.properties) {
         property = this.properties[p];
         var name = property.name;
@@ -152,6 +176,7 @@ var Vineyard = (function () {
               for (i = 0; i < list.length; i++) {
                 //var child = list[i] = Seed.create(list[i], property.target_trellis);
                 var child = list[i] = property.target_trellis.create_seed(list[i]);
+                child._plantable = false;
                 child.connect(seed, 'parent', property.target_trellis.name);
               }
             }
@@ -164,6 +189,7 @@ var Vineyard = (function () {
               continue;
             
             seed[name] =  property.target_trellis.create_seed(source[name]);
+            seed[name]._plantable = false;
           }
           else {
             if (typeof source[name] !== 'undefined')
@@ -187,6 +213,7 @@ var Vineyard = (function () {
     //      return Bloom.join(garden.app_path, channel, trellis, this.id) + Bloom.render_query(parameters);
     //    },
     initialize: function(source, trellis) {
+      this.plant = this._plant;
       source = source || {};
       if (typeof source != 'object')
         source = {
@@ -200,7 +227,7 @@ var Vineyard = (function () {
     },
     _delete: function(silent) {
       this._deleted = true;
-      this.plant(silent);
+      this._plant(silent);
     },
     _go: function(action, args) {
       var url = this.get_url('page', action, args);
@@ -214,8 +241,34 @@ var Vineyard = (function () {
         this.deleted[type].push(child);
       });
     },
-    plant: function(silent) {
-      var self = this;
+    _plant: function(silent) {
+      if (this._plantable === false)
+        throw new Exception("Attempt to plant an unplantable seed.");
+      
+      var self = this, item = this._prepare_for_planting(); 
+      var data = {
+        objects: [ item ]
+      };
+      
+      var url = this.trellis.vineyard.garden.irrigation.get_plant_url() + Bloom.render_query({
+        'XDEBUG_SESSION_START': 'netbeans-xdebug'
+      });
+      Bloom.post_json(url, data, function(response) {
+        if (response.success && Bloom.output) {
+          self.id = response.id;
+          
+          if (silent)
+            return;
+          
+          Bloom.output({
+            message: 'Saved.'
+          });
+          
+          self.trellis.vineyard.invoke('seed-updated', self);
+        }
+      });
+    },
+    _prepare_for_planting: function() {
       var property, name, type, item = {}, p;
       
       if (this._deleted === true) {
@@ -231,12 +284,12 @@ var Vineyard = (function () {
           property = this.trellis.properties[p];
           name = property.name;
           type = property.type;
-          var value = this.value(name);
+          var value = this[name];
         
           if (value !== undefined && value !== null) {
-            if (type == 'list') {
+            if (type == 'list') {                
               item[name] = value.map(function(x) {
-                return x.id;
+                return Seed.prepare_for_planting(x, property.target_trellis)
               });
             
               if (value.deleted && value.deleted.length > 0) {
@@ -246,7 +299,7 @@ var Vineyard = (function () {
               }
             }
             else if (type == 'reference') {
-              item[name] = value[property.target_trellis.primary_key];
+              item[name] = Seed.prepare_for_planting(value, property.target_trellis);
             }
             else {
               item[name] = value;
@@ -254,30 +307,28 @@ var Vineyard = (function () {
           }
         }
       }
-      item.trellis = this.trellis.name
-      var data = {
-        objects: [ item ]
-      };
-      
-      var url = this.trellis.vineyard.garden.irrigation.get_plant_url() + Bloom.render_query({
-        'XDEBUG_SESSION_START': 'netbeans-xdebug'
-      });
-      Bloom.post(url, data, function(response) {
-        if (response.success && Bloom.output) {
-          self.id = response.id;
-          
-          if (silent)
-            return;
-          
-          Bloom.output({
-            message: 'Saved.'
-          });
-          
-          self.trellis.vineyard.invoke('seed-updated', self);
-        }
-      });
+      item.trellis = this.trellis.name;
+      return item;
     }
   });
+  
+  Seed.prepare_for_planting = function(item, trellis) {
+    var key = 'id';
+    if (trellis)
+      key = trellis.primary_key;
+    
+    if (typeof item == 'object') {
+      if (typeof item._prepare_for_planting == 'function' && item._plantable !== false) {
+        return item._prepare_for_planting();
+      }
+      
+      if (typeof item[key] !== undefined && typeof item[key] !== null) {
+        return item[key];
+      }      
+    }
+    
+    return item;
+  }
 
   var Seed_List = Meta_Object.subclass('Seed_List', {
     seed_name: 'objects',

@@ -543,7 +543,7 @@ var Bloom = (function() {
     },
     child_connected: function(flower) {
       var line;
-      if (flower.element[0].nodeName.toLowerCase() == 'li') {
+      if (flower.element[0].nodeName.toLowerCase() == 'li' || this.element.prop('tagName') != 'UL') {
         line = flower.element;
       }
       else {
@@ -1352,9 +1352,9 @@ Bloom.get = function(url, action, error, sync) {
 Bloom.output = function() {
 };
 
-Bloom.post = function(url, seed, method, error) {
-  if (method === undefined) {
-    method = seed;
+Bloom.post = function(url, seed, success, error) {
+  if (success === undefined) {
+    success = seed;
     seed = null;
   }
 
@@ -1362,10 +1362,10 @@ Bloom.post = function(url, seed, method, error) {
     url = Bloom.ajax_prefix + url;
   }
 
-  var success = function(response) {
+  var action = function(response) {
     if ((response.result && response.result.toLowerCase() == 'success') || response.success) {
-      if (method) {
-        method(response);
+      if (success) {
+        success(response);
       }
     }
 
@@ -1373,14 +1373,41 @@ Bloom.post = function(url, seed, method, error) {
       Bloom.output(response);
     }
   };
-  console.log('hello world!');
-  console.log(url);
   jQuery.ajax({
     type: 'POST',
     url: url,
     data: seed,
-    success: success,
+    success: action,
     error: error
+  });
+}
+
+Bloom.post_json = function(url, seed, success, error) {
+  if (Bloom.ajax_prefix) {
+    url = Bloom.ajax_prefix + url;
+  }
+
+  var action = function(response) {
+    if ((response.result && response.result.toLowerCase() == 'success') || response.success) {
+      if (success) {
+        success(response);
+      }
+    }
+
+    if (typeof Bloom.output == 'function') {
+      Bloom.output(response);
+    }
+  };
+  if (typeof seed == 'object') {
+    seed = JSON.stringify(seed);
+  }
+  jQuery.ajax({
+    type: 'POST',
+    url: url,
+    data: seed,
+    success: action,
+    error: error,
+    contentType: 'application/json'
   });
 }
 

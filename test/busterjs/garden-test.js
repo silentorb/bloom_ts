@@ -38,7 +38,7 @@ buster.testCase("Irrigation", {
     assert.equals('/dream/world/door/12', location.pathname);
     var irrigation = Fixtures.initialize_garden().irrigation;
     var request = irrigation.get_request();
-    assert.equals(request.path.length, 3);
+    assert.equals(request.path.length, 2);
     assert.equals(request.trellis, 'door');
     assert.equals(request.id, 12);
     
@@ -62,11 +62,11 @@ buster.testCase("Seed", {
     assert.isObject(this.garden);
     assert.isObject(this.garden.vineyard);
     assert.isObject(this.garden.vineyard.trellises);
-    assert.isObject(this.garden.vineyard.trellises['door']);
+    assert.isObject(this.garden.vineyard.trellises['warrior']);
   },
   "test_get_url": function () {
-    var seed = this.garden.vineyard.trellises['door'].create_seed();
-    seed.data.id = 12;
-    assert.equals(seed.get_url('page'), 'dream/world/door/12')
+    var seed = this.garden.vineyard.trellises['warrior'].create_seed();
+    seed.id = 12;
+    assert.equals(seed.get_url('page'), 'dream/world/warrior/12')
   }
 });

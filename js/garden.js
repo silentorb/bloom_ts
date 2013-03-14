@@ -197,18 +197,22 @@ var Garden = Meta_Object.subclass('Garden', {
   initialize_query: function(query) {
     return query;
   },
-  goto_item: function(trellis_name, id) {
-    var self = this;
+  goto_item: function(trellis_name, args) {
+    var arg_string, self = this;
     if (typeof trellis_name == 'object')
       trellis_name = trellis_name.name;
     
-    if (typeof id == 'object') {
-      id = Bloom.render_query(id);
-    }
-    var query = Bloom.join(this.app_path, 'vineyard', trellis_name, id);
+    // Ensure arguments are in string form.
+    if (typeof args == 'object')
+      arg_string = Bloom.render_query(args);
+    else
+      arg_string = args;
+    
+    var query = Bloom.join(this.app_path, 'vineyard', trellis_name, arg_string);
     Bloom.get(query, function(response) {
       if (!response.objects.length) {
         console.log ('No objects found with query: ' + query);
+        self.invoke('not-found', trellis_name, args);
         return;
       }
         
