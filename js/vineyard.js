@@ -351,7 +351,7 @@ var Vineyard = (function () {
       key = trellis.primary_key;
     
     if (typeof item == 'object') {      
-      if (typeof item[key] !== undefined && typeof item[key] !== null) {
+      if (item[key] !== undefined && item[key] !== null) {
         --bag.depth;
         return item[key];
       }
