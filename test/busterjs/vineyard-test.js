@@ -76,11 +76,14 @@ buster.testCase("Arbor", {
         name: 'bow'
       }]
     });
-    
-    assert.equals(warrior_trellis.get_connections('seed').length, 1);
-    assert.equals(warrior_trellis.get_connections('seed')[0].name, 'Orion');
-    assert.equals(item_trellis.get_connections('seed').length, 1);
-    assert.equals(item_trellis.get_connections('seed')[0].name, 'bow');
-    
+
+    var warriors = warrior_trellis.get_connections('seed');
+    var items = item_trellis.get_connections('seed');
+    assert.equals(warriors.length, 1);
+    assert.equals(items.length, 1);
+    assert.equals(warriors[0].name, 'Orion');
+    assert.equals(items[0].name, 'bow');
+    refute.same(warriors[0]._plantable, false);
+    refute.same(items[0]._plantable, false);
   }
 });

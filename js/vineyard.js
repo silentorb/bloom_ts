@@ -5,6 +5,7 @@ var Vineyard = (function () {
     views: {},
     meta_objects: {},
     default_arbor: null,
+    max_plant_depth: 16,  // A limit against infinite recursion in planting.
     initialize: function(middle_data, bloom_data) {
       var x, trellis;
 
@@ -108,11 +109,17 @@ var Vineyard = (function () {
           var seed = this.get_seed_by_id(source.id);
           if (seed) {
             this.populate_seed(seed, source);
+            if (seed._plantable === false)
+              delete seed._plantable;
+            
             return seed;
           }
         }
       }
       seed = Seed.create(source, this);
+      if (!source)
+        seed._plantable = false;
+      
       seed.connect(this, 'trellis', 'seed');
       this.populate_seed(seed, source);
     
@@ -176,7 +183,6 @@ var Vineyard = (function () {
               for (i = 0; i < list.length; i++) {
                 //var child = list[i] = Seed.create(list[i], property.target_trellis);
                 var child = list[i] = property.target_trellis.create_seed(list[i]);
-                child._plantable = false;
                 child.connect(seed, 'parent', property.target_trellis.name);
               }
             }
@@ -189,7 +195,6 @@ var Vineyard = (function () {
               continue;
             
             seed[name] =  property.target_trellis.create_seed(source[name]);
-            seed[name]._plantable = false;
           }
           else {
             if (typeof source[name] !== 'undefined')
@@ -241,11 +246,21 @@ var Vineyard = (function () {
         this.deleted[type].push(child);
       });
     },
-    _plant: function(silent) {
-      if (this._plantable === false)
-        throw new Exception("Attempt to plant an unplantable seed.");
+    _plant: function(silent, success) {
+      if (typeof silent === 'function') {
+        success = silent;
+        silent = false;
+      }
       
-      var self = this, item = this._prepare_for_planting(); 
+      if (this._plantable === false)
+        throw new Error("Attempt to plant an unplantable seed.");
+      
+      var bag = {
+        seeds: [],
+        depth: 0
+      };
+      
+      var self = this, item = this._prepare_for_planting(bag); 
       var data = {
         objects: [ item ]
       };
@@ -256,7 +271,9 @@ var Vineyard = (function () {
       Bloom.post_json(url, data, function(response) {
         if (response.success && Bloom.output) {
           self.id = response.id;
-          
+          if (typeof success === 'function') {
+            success(self);
+          }  
           if (silent)
             return;
           
@@ -265,10 +282,18 @@ var Vineyard = (function () {
           });
           
           self.trellis.vineyard.invoke('seed-updated', self);
+
         }
       });
     },
-    _prepare_for_planting: function() {
+    _prepare_for_planting: function(bag) {
+      //      if (!bag)
+      //        throw new Error('A valid bag object is required for planting.');
+      //
+      //    if (bag.depth > trellis.vineyard.max_plant_depth)
+      //      throw new Error('Infinite loop detected during planting.');
+    
+      ++bag.depth;
       var property, name, type, item = {}, p;
       
       if (this._deleted === true) {
@@ -289,7 +314,7 @@ var Vineyard = (function () {
           if (value !== undefined && value !== null) {
             if (type == 'list') {                
               item[name] = value.map(function(x) {
-                return Seed.prepare_for_planting(x, property.target_trellis)
+                return Seed.prepare_for_planting(x, property.target_trellis, bag)
               });
             
               if (value.deleted && value.deleted.length > 0) {
@@ -299,7 +324,7 @@ var Vineyard = (function () {
               }
             }
             else if (type == 'reference') {
-              item[name] = Seed.prepare_for_planting(value, property.target_trellis);
+              item[name] = Seed.prepare_for_planting(value, property.target_trellis, bag);
             }
             else {
               item[name] = value;
@@ -308,25 +333,37 @@ var Vineyard = (function () {
         }
       }
       item.trellis = this.trellis.name;
+      --bag.depth;
       return item;
     }
   });
   
-  Seed.prepare_for_planting = function(item, trellis) {
+  Seed.prepare_for_planting = function(item, trellis, bag) {
+    //    if (!bag)
+    //      throw new Error('A valid bag object is required for planting.');
+    //    
+    //    if (bag.depth > trellis.vineyard.max_plant_depth)
+    //      throw new Error('Infinite loop detected during planting.');
+    //    
+    ++bag.depth;
     var key = 'id';
     if (trellis)
       key = trellis.primary_key;
     
-    if (typeof item == 'object') {
-      if (typeof item._prepare_for_planting == 'function' && item._plantable !== false) {
-        return item._prepare_for_planting();
+    if (typeof item == 'object') {      
+      if (typeof item[key] !== undefined && typeof item[key] !== null) {
+        --bag.depth;
+        return item[key];
       }
       
-      if (typeof item[key] !== undefined && typeof item[key] !== null) {
-        return item[key];
-      }      
+      if (typeof item._prepare_for_planting == 'function' && item._plantable !== false) {
+        --bag.depth;
+        return item._prepare_for_planting(bag);
+      }
+
     }
     
+    --bag.depth;
     return item;
   }
 
@@ -675,14 +712,17 @@ var Vineyard = (function () {
     },
     generate_vines: function(seed, type_info) {
       this.list.empty();
-      
-      var properties = Arbor.sort_vines(type_info.properties);
+      var properties = {}, p;
+      for (p in type_info.properties) {
+        properties[p] = this.get_view_property(type_info.properties[p]);
+      }
+      properties = Arbor.sort_vines(properties);
       for (var i = 0; i < properties.length; i++) {
         // In explicit mode original properties are not shown if they aren't also defined in the view.
         if (this.view && this.view.explicit && !this.view.properties[properties[i].name])
           continue;
         
-        var property = this.get_view_property(properties[i]);
+        var property = properties[i];
         if (!property.readonly && property.visible !== false) {
           var control = this.create_vine(seed, property);
           var skin = Vine_Skin.create(control);
