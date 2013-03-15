@@ -265,12 +265,16 @@ var Vineyard = (function () {
         objects: [ item ]
       };
       
+      var primary_key = this.trellis.primary_key;
+      
       var url = this.trellis.vineyard.garden.irrigation.get_plant_url() + Bloom.render_query({
         'XDEBUG_SESSION_START': 'netbeans-xdebug'
       });
       Bloom.post_json(url, data, function(response) {
-        if (response.success && Bloom.output) {
-          self.id = response.id;
+        if (response.success && Bloom.output) {          
+          if (self[primary_key] === undefined)
+            self[primary_key] = response[primary_key];
+          
           if (typeof success === 'function') {
             success(self);
           }  
