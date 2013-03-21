@@ -12,6 +12,7 @@ var Edit_Arbor = Vineyard.Arbor.sub_class('Edit_Arbor', {
     });
     
     this.element.find('#cancel, .cancel').click(function(e) {
+      self.garden.vineyard.trellises.todo.disconnect_all('seed');
       e.preventDefault();
       history.back();
     });
@@ -369,6 +370,9 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
     return Bloom.join(this.app_path, channel, 'update');
   },
   get_url: function(type, trellis, id, action, args) {
+    if (arguments.length == 1)
+      return Bloom.join(this.app_path, arguments[0]);
+    
     var channel = this.get_channel(type);
     var trellis = this.get_trellis(trellis);
     return Bloom.join(this.app_path, channel, trellis, id, action) + Bloom.render_query(args);
