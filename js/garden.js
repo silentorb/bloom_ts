@@ -44,20 +44,6 @@ var Content_Panel = Flower.sub_class('Content_Panel', {
   initialize: function() {
     this.content = this.element;
   },
-  load_index: function(name) {
-    var self = this;
-    this.content.empty();
-    var seed = Seed_List.create(self.garden.vineyard.trellises[name]);
-    seed.query = function() {
-      return Bloom.join(self.garden.app_path, 'vineyard', name);
-    };
-    var list = Index_List.create(seed);
-    this.append(list);
-    seed.update();
-    var query = self.garden.initialize_query('?action=create&trellis=' + name);
-    var create = $('<div class="create"><a href="' + query + '">Create</a></div>');
-    this.content.prepend(create);
-  },
   get_arbor: function(trellis, action) {
     var name;
     if (action) {
@@ -78,6 +64,20 @@ var Content_Panel = Flower.sub_class('Content_Panel', {
       return this.arbors[trellis.name];
 
     return this.default_arbor;
+  },
+  load_index: function(name) {
+    var self = this;
+    this.content.empty();
+    var seed = Seed_List.create(self.garden.vineyard.trellises[name]);
+    seed.query = function() {
+      return Bloom.join(self.garden.app_path, 'vineyard', name);
+    };
+    var list = Index_List.create(seed);
+    this.append(list);
+    seed.update();
+    var query = self.garden.initialize_query('?action=create&trellis=' + name);
+    var create = $('<div class="create"><a href="' + query + '">Create</a></div>');
+    this.content.prepend(create);
   },
   load_create: function(trellis, request) {
     var item = trellis.create_seed({});
@@ -101,22 +101,52 @@ var Content_Panel = Flower.sub_class('Content_Panel', {
 
     this.replace_element(edit);
   },
-  load_edit: function(item) {
-    if (!item.trellis)
+  load_edit: function(seed, request) {
+    if (!seed.trellis)
       throw new Error('item.trellis = null!');
 
-    if (this.arbor && typeof this.arbor.refresh == 'function') {
-      this.arbor.refresh(item);
+    var arbor = this.get_arbor(seed.trellis, request.action);
+    this.invoke('load.edit', seed, request, arbor);
+    
+    var data = {
+      seed: seed,
+      trellis: seed.trellis
+    };
+    
+    if (request.action) {
+      var view = this.garden.vineyard.views[request.action + '.' + seed.trellis.name];    
+      if (view) {
+        data.view = view;
+      }    
+    }
+    var edit = arbor.create(data);
+    edit.garden = this.garden;
+    if (this.arbor) {
+      this.refresh(this.arbor.seed, seed, edit.element);
     }
     else {
-      var arbor = this.get_arbor(item.trellis);
-      var edit = arbor.create({
-        seed: item,
-        trellis: item.trellis
-      });
-      this.arbor = edit;
-      this.replace_element(edit);
+      this.set_header(seed);
+      this.content.empty();
+      this.content.append(edit.element);
     }
+    
+    this.arbor = edit;
+    
+  //    if (!item.trellis)
+  //      throw new Error('item.trellis = null!');
+  //
+  //    if (this.arbor && typeof this.arbor.refresh == 'function') {
+  //      this.arbor.refresh(item);
+  //    }
+  //    else {
+  //      var arbor = this.get_arbor(item.trellis);
+  //      var edit = arbor.create({
+  //        seed: item,
+  //        trellis: item.trellis
+  //      });
+  //      this.arbor = edit;
+  //      this.replace_element(edit);
+  //    }
   },
   replace_element: function(new_element) {
     this.content.empty();
@@ -217,9 +247,9 @@ var Garden = Meta_Object.subclass('Garden', {
         return;
       }
         
-      var item = self.vineyard.trellises[trellis_name].create_seed(response.objects[0]);
-      self.content_panel.load_edit(item, self.request);
-      self.invoke('edit', item);
+      var seed = self.vineyard.trellises[trellis_name].create_seed(response.objects[0]);
+      self.content_panel.load_edit(seed, self.request);
+      self.invoke('edit', seed);
     });
   },
   lightning: function(url, silent) {
@@ -337,6 +367,7 @@ List_Vine.properties.list_type = Children_List;
 var Irrigation = Meta_Object.subclass('Irrigation', {
   app_path: '',
   page_path: '',
+  trellis_plots: {},
   trellis_map: {},
   // Eventually parameters will be passed to this, but right now it's very simple.
   get_channel: function(type) {
@@ -441,22 +472,3 @@ Irrigation.get_path_array = function(path, base) {
 
   return path;
 }
-
-//Irrigation.get_path_array = function(path, base, page_path) {
-//  if (path[0] == '/')
-//    path = path.substring(1);
-//
-//  path = path.split('/');
-//  if (typeof base === 'string' && base.length > 0) {
-//    if (base[0] == '/')
-//      base = base.substring(1);
-//
-//    if (base.length == 0)
-//      return path;
-//
-//    var base_path = base.split('/');
-//    path.splice(0, base_path.length);
-//  }
-//
-//  return path;
-//}
