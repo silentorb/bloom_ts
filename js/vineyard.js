@@ -683,7 +683,7 @@ var Vineyard = (function () {
       this.list = List.create(list_element);
       if (!this.seed)
         return;
-      
+            
       if (this.seed.meta_source === Seed) {
         this.trellis = this.seed.trellis;
       }
@@ -691,18 +691,20 @@ var Vineyard = (function () {
         var options = this.seed;
         this.seed = options.seed;
         this.trellis = options.trellis;
-        if (options.view) {
-          this.view = options.view;
-        }
-        else if (options.view !== false) {
-          if (this.trellis.vineyard.views[this.trellis.name]) {
-            this.view = this.trellis.vineyard.views[this.trellis.name];
+        if (this.trellis) {
+          if (options.view) {
+            this.view = options.view;
           }
+          else if (options.view !== false) {
+            if (this.trellis.vineyard.views[this.trellis.name]) {
+              this.view = this.trellis.vineyard.views[this.trellis.name];
+            }
+          }
+      
+          this.vineyard = this.trellis.vineyard;      
+          this.generate_vines(this.seed, this.trellis);
         }
       }
-      
-      this.vineyard = this.trellis.vineyard;      
-      this.generate_vines(this.seed, this.trellis);
     },
     create_vine: function(seed, property) {
       var control_type = this.get_vine_type(property);

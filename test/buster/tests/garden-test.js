@@ -62,7 +62,15 @@ buster.testCase("Irrigation", {
     var request = irrigation.get_request();
     assert.equals(request.action, 'delete');
     assert.equals(request.id, 12);
-    //    window.history.pushState('', '', original_url);
+  //    window.history.pushState('', '', original_url);
+  },
+  "compare": function() {
+    assert(Irrigation.compare('hello/frog', 'hello/frog'));
+    assert(Irrigation.compare('hello/frog', 'hello/*'));
+    assert(Irrigation.compare('hello/frog', ['hello', 'frog']));
+    assert(Irrigation.compare(['*', 'frog'], ['hello', 'frog']));    
+    refute(Irrigation.compare(['*', 'frog'], 'b/c'));
+    refute(Irrigation.compare('hello/frog', ['hello', 'frog', '2']));    
   }
 });
 

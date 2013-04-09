@@ -57,7 +57,8 @@ var Content_Panel = Plot = Flower.sub_class('Content_Panel', {
       return this.arbors[trellis.name];
     return this.default_arbor;
   },
-  load_index: function(name) {
+  index: function(request) {
+    var name = request.trellis;
     var self = this;
     this.content.empty();
     var seed = Seed_List.create(self.garden.vineyard.trellises[name]);
@@ -119,21 +120,21 @@ var Content_Panel = Plot = Flower.sub_class('Content_Panel', {
     }
 
     this.arbor = edit;
-    //    if (!item.trellis)
-    //      throw new Error('item.trellis = null!');
-    //
-    //    if (this.arbor && typeof this.arbor.refresh == 'function') {
-    //      this.arbor.refresh(item);
-    //    }
-    //    else {
-    //      var arbor = this.get_arbor(item.trellis);
-    //      var edit = arbor.create({
-    //        seed: item,
-    //        trellis: item.trellis
-    //      });
-    //      this.arbor = edit;
-    //      this.replace_element(edit);
-    //    }
+  //    if (!item.trellis)
+  //      throw new Error('item.trellis = null!');
+  //
+  //    if (this.arbor && typeof this.arbor.refresh == 'function') {
+  //      this.arbor.refresh(item);
+  //    }
+  //    else {
+  //      var arbor = this.get_arbor(item.trellis);
+  //      var edit = arbor.create({
+  //        seed: item,
+  //        trellis: item.trellis
+  //      });
+  //      this.arbor = edit;
+  //      this.replace_element(edit);
+  //    }
   },
   replace_element: function(new_element) {
     this.content.empty();
@@ -141,9 +142,9 @@ var Content_Panel = Plot = Flower.sub_class('Content_Panel', {
   },
   set_garden: function(garden) {
     this.garden = garden;
-    this.listen(garden, 'index', this.load_index);
+    //    this.listen(garden, 'index', this.index);
     this.listen(garden, 'create', this.load_create);
-    //    this.listen(garden, 'edit', this.load_edit);
+  //    this.listen(garden, 'edit', this.load_edit);
   }
 });
 
@@ -158,6 +159,8 @@ var Garden = Meta_Object.subclass('Garden', {
   initialize: function() {
     if (this.block_path)
       Block.source_path = this.block_path;
+    
+    this.listen(this, 'create', this.on_create);
   },
   initialize_irrigation: function() {
     var irrigation = Irrigation.create();
@@ -177,6 +180,9 @@ var Garden = Meta_Object.subclass('Garden', {
 
   },
   create_plot: function(type) {
+    if (this.plot && type.name === this.plot.meta_source.name)
+      return this.plot;
+      
     var plot = type.create(this);
     var plot_container = $(this.plot_container);
     plot_container.empty();
@@ -201,20 +207,13 @@ var Garden = Meta_Object.subclass('Garden', {
       self.process_request(self.request);
     }, this.app_path);
   },
-  get_plot: function(trellis) {
-    var plot_type = this.irrigation.get_plot(trellis);
-    if (!plot_type)
-      return null;
-    if (!this.plot || plot_type.name !== this.plot.meta_source.name) {
-      this.create_plot(plot_type);
-    }
-
-    return this.plot;
+  get_plot: function(request) {
+    return this.irrigation.get_plot(request.trellis);
   },
   goto_item: function(trellis_name, args) {
     var arg_string, self = this;
     if (typeof trellis_name == 'object')
-      trellis_name = trellis_name.name;
+      trellis_name = trellis_name.trellis || trellis_name.name;
     // Ensure arguments are in string form.
     if (typeof args == 'object')
       arg_string = Bloom.render_query(args);
@@ -229,7 +228,7 @@ var Garden = Meta_Object.subclass('Garden', {
       }
 
       var seed = self.vineyard.trellises[trellis_name].create_seed(response.objects[0]);
-      var plot = get_plot(self.request.trellis);
+      var plot = this.get_plot(self.request.trellis);
       if (!plot)
         throw new Error('No matching plot could be found.');
       plot.load_edit(seed, self.request);
@@ -258,14 +257,14 @@ var Garden = Meta_Object.subclass('Garden', {
     return query;
   },
   lightning: function(url, silent) {
-//    var url;
+    //    var url;
 
-//    if (arguments.length < 2) {
-//      url = trellis;
-//    }
-//    else {
-//      url = Bloom.join(this.app_path, trellis.name, action) + Bloom.render_query(args);
-//    }
+    //    if (arguments.length < 2) {
+    //      url = trellis;
+    //    }
+    //    else {
+    //      url = Bloom.join(this.app_path, trellis.name, action) + Bloom.render_query(args);
+    //    }
     if (!silent) {
       history.pushState({
         name: 'garden',
@@ -284,6 +283,13 @@ var Garden = Meta_Object.subclass('Garden', {
       MetaHub.extend(this, settings);
     }
   },
+  on_create: function(request) {
+    var item = this.vineyard.trellises[request.trellis].create_seed(request.parameters);
+    this.content_panel.load_edit(item, request);
+    this.invoke('edit', item, request);
+  //this.invoke('create', this.vineyard.trellises[request.trellis], request);
+  //          Garden.content_panel.load_create(Garden.vineyard.trellises[request.trellis]);
+  },
   print: function(response) {
     if (!response.message)
       return;
@@ -300,30 +306,29 @@ var Garden = Meta_Object.subclass('Garden', {
   },
   process_request: function(request) {
     console.log(request);
-    var id = request.parameters.id || request.id;
-    if (request.trellis && this.vineyard.trellises[request.trellis]) {
-      if (request.action == 'create') {
-        var item = this.vineyard.trellises[request.trellis].create_seed(request.parameters);
-        this.content_panel.load_edit(item, request);
-        this.invoke('edit', item, request);
-        //this.invoke('create', this.vineyard.trellises[request.trellis], request);
-        //          Garden.content_panel.load_create(Garden.vineyard.trellises[request.trellis]);
-      }
-      else if (id) {
-        this.goto_item(request.trellis, id);
-      }
-      else {
-        this.invoke('index', request.trellis);
-      }
+    //    if (request.trellis && this.vineyard.trellises[request.trellis]) {
+    var plot_type = this.get_plot(request);
+    if (!plot_type)
+      throw new Error('No matching plot could be found.');
+    //    }
+    
+    this.create_plot(plot_type);
+    
+    var action = this.irrigation.determine_action(request, this.vineyard);
+    if (typeof action == 'function') {
+      action(request);
+    }
+    else if (typeof action == 'string') {
+      this.invoke(action, request);
     }
     else {
-      this.invoke('other');
+      throw new Error("Invalid action type.");
     }
   }
 });
 Garden.grow = function(testing) {
-// When unit testing this function is skipped because it is very global.
-// The only way to run this function during unit testing is to pass it the value true.
+  // When unit testing this function is skipped because it is very global.
+  // The only way to run this function during unit testing is to pass it the value true.
   if (!testing && window.TESTING)
     return;
   var garden = this.create();
@@ -351,19 +356,45 @@ var Child_Item = Index_Item.sub_class('Child_Item', {
     });
   }
 });
+
 var Index_List = List.sub_class('Index_List', {
   item_type: Index_Item
 });
+
 var Children_List = List.sub_class('Children_List', {
   block: 'list',
   item_type: Child_Item
 });
+
 List_Vine.properties.list_type = Children_List;
+
 var Irrigation = Meta_Object.subclass('Irrigation', {
   app_path: '',
   page_path: '',
   trellis_plots: {},
   trellis_map: {},
+  channels: {},
+  determine_action: function(request, vineyard) {
+    if (request.trellis && vineyard.trellises[request.trellis]) {      
+      if (request.action == 'create') {
+        return 'create';        
+      }
+      else if (request.id) {
+        return 'goto';
+      }
+      else {
+        return 'index';
+      }
+    }
+    
+    for (var path in this.channels) {
+      if (Irrigation.compare(path, request.path)) {
+        return this.channels[path];
+      }
+    }
+          
+    return 'other';
+  },
   // Eventually parameters will be passed to this, but right now it's very simple.
   get_channel: function(type) {
     if (type == 'seed')
@@ -428,6 +459,9 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
           request.action = path[1];
       }
     }
+    
+    if (request.id === undefined && request.parameters.id !== undefined)
+      request.id = request.parameters.id;
 
     return request;
   },
@@ -438,6 +472,9 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
   }
 });
 Irrigation.convert_path_to_array = function(path) {
+  if (typeof path == 'object')
+    return path;
+  
   if (!path || path.length == 0)
     return [];
   if (path[0] == '/')
@@ -461,4 +498,25 @@ Irrigation.get_path_array = function(path, base) {
   }
 
   return path;
+}
+
+Irrigation.compare = function(a, b) {
+  a = Irrigation.convert_path_to_array(a);
+  b = Irrigation.convert_path_to_array(b);
+  
+  if (a.length != b.length)
+    return false;
+  
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] == '*' || b[i] == '*')
+      continue;
+
+    if (a[i] == '%' || b[i] == '%')
+      continue;
+
+    if (a[i] != b[i])
+      return false;
+  }
+
+  return true;
 }
