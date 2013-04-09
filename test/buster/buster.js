@@ -9,10 +9,10 @@ config["Bloom tests"] = {
   "js/bloom.js",
   "js/vineyard.js",
   "js/garden.js",
-  "test/busterjs/model.js"
+  "test/buster/model.js"
   ],
   tests: [
-  "test/busterjs/*-test.js"
+  "test/buster/tests/*-test.js"
   ]
 }
 
