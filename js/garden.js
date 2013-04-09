@@ -166,6 +166,10 @@ var Garden = Meta_Object.subclass('Garden', {
     irrigation.app_path = this.app_path;
   },
   attach_model: function(model) {
+    model = model || {
+      trellises: {},
+      views: {}
+    }
     this.vineyard = Vineyard.create(model.trellises, model.views);
     this.vineyard.garden = this;
   },
@@ -392,7 +396,7 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
   get_plot: function(trellis) {
     if (this.trellis_plots[trellis])
       return this.trellis_plots[trellis];
-    
+
     return null;
   },
   get_url: function(type, trellis, id, action, args) {
