@@ -142,7 +142,7 @@ var Content_Panel = Plot = Flower.sub_class('Content_Panel', {
   },
   set_garden: function(garden) {
     this.garden = garden;
-    //    this.listen(garden, 'index', this.index);
+    this.listen(garden, 'index', this.index);
     this.listen(garden, 'create', this.load_create);
   //    this.listen(garden, 'edit', this.load_edit);
   }
@@ -184,6 +184,7 @@ var Garden = Meta_Object.subclass('Garden', {
       return this.plot;
       
     var plot = type.create(this);
+    plot.set_garden(this);
     var plot_container = $(this.plot_container);
     plot_container.empty();
     plot_container.append(plot.element);
@@ -208,6 +209,14 @@ var Garden = Meta_Object.subclass('Garden', {
     }, this.app_path);
   },
   get_plot: function(request) {
+    var plot_type = this.get_plot_type(request);
+    if (!plot_type)
+      throw new Error('No matching plot could be found.');
+    //    }
+    
+    return this.create_plot(plot_type);    
+  },
+  get_plot_type: function(request) {
     return this.irrigation.get_plot(request.trellis);
   },
   goto_item: function(trellis_name, args) {
@@ -228,9 +237,7 @@ var Garden = Meta_Object.subclass('Garden', {
       }
 
       var seed = self.vineyard.trellises[trellis_name].create_seed(response.objects[0]);
-      var plot = this.get_plot(self.request.trellis);
-      if (!plot)
-        throw new Error('No matching plot could be found.');
+      var plot = self.get_plot(self.request);      
       plot.load_edit(seed, self.request);
       self.invoke('edit', seed);
     });
@@ -307,13 +314,8 @@ var Garden = Meta_Object.subclass('Garden', {
   process_request: function(request) {
     console.log(request);
     //    if (request.trellis && this.vineyard.trellises[request.trellis]) {
-    var plot_type = this.get_plot(request);
-    if (!plot_type)
-      throw new Error('No matching plot could be found.');
-    //    }
-    
-    this.create_plot(plot_type);
-    
+    this.get_plot(request);
+
     var action = this.irrigation.determine_action(request, this.vineyard);
     if (typeof action == 'function') {
       action(request);
