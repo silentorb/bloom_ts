@@ -689,8 +689,14 @@ var Vineyard = (function () {
       }
       else {
         var options = this.seed;
+        if (!options.trellis)
+          return;
+        
         this.seed = options.seed;
         this.trellis = options.trellis;
+        if (!this.seed) {
+          this.seed = this.trellis.create_seed();
+        }
         if (this.trellis) {
           if (options.view) {
             this.view = options.view;
@@ -774,6 +780,15 @@ var Vineyard = (function () {
           Flower.set_value(element, value);
         }
       });    
+    },
+    submit: function() {
+      var self = this;
+      if (typeof this.seed._plant == 'function') {
+        delete this.seed._plantable;
+        this.seed._plant(function() {
+          self.invoke('finish', self.seed);
+        });
+      }
     }
   });  
   
