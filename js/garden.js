@@ -211,8 +211,8 @@ var Garden = Meta_Object.subclass('Garden', {
   get_plot: function(request) {
     var plot_type = this.get_plot_type(request);
     if (!plot_type)
-      throw new Error('No matching plot could be found.');
-    //    }
+      return null;
+//      throw new Error('No matching plot could be found.');
     
     return this.create_plot(plot_type);    
   },
@@ -237,9 +237,11 @@ var Garden = Meta_Object.subclass('Garden', {
       }
 
       var seed = self.vineyard.trellises[trellis_name].create_seed(response.objects[0]);
-      var plot = self.get_plot(self.request);      
-      plot.load_edit(seed, self.request);
-      self.invoke('edit', seed);
+      var plot = self.get_plot(self.request);
+      if (plot) {
+        plot.load_edit(seed, self.request);
+        self.invoke('edit', seed);
+      }
     });
   },
   grow: function(next_action) {
@@ -328,12 +330,14 @@ var Garden = Meta_Object.subclass('Garden', {
     }
   }
 });
-Garden.grow = function(testing) {
+Garden.grow = function(testing, garden) {
   // When unit testing this function is skipped because it is very global.
   // The only way to run this function during unit testing is to pass it the value true.
   if (!testing && window.TESTING)
     return;
-  var garden = this.create();
+  if (!garden)
+    garden = this.create();
+  
   jQuery(function() {
     garden.load_landscape();
     garden.fertilize();
