@@ -72,8 +72,8 @@ var Content_Panel = Plot = Flower.sub_class('Content_Panel', {
     var create = $('<div class="create"><a href="' + query + '">Create</a></div>');
     this.content.prepend(create);
   },
-  load_create: function(trellis, request) {
-    var item = trellis.create_seed({});
+  load_create: function(request) {
+    var item = this.vineyard.trellises[request.trellis].create_seed({});
     //    var request = Bloom.get_url_properties();
     //    for (var x in trellis.properties) {
     //      if (trellis.properties[x] !== undefined && request[x] != undefined) {
@@ -224,10 +224,14 @@ var Garden = Meta_Object.subclass('Garden', {
     if (typeof trellis_name == 'object')
       trellis_name = trellis_name.trellis || trellis_name.name;
     // Ensure arguments are in string form.
-    if (typeof args == 'object')
+    if (typeof args == 'object') {
       arg_string = Bloom.render_query(args);
-    else
+      self.request.args = args;
+    }
+    else {
       arg_string = args;
+    }
+    
     var query = Bloom.join(this.app_path, 'vineyard', trellis_name, arg_string);
     Bloom.get(query, function(response) {
       if (!response.objects.length) {
@@ -237,6 +241,7 @@ var Garden = Meta_Object.subclass('Garden', {
       }
 
       var seed = self.vineyard.trellises[trellis_name].create_seed(response.objects[0]);
+      self.request.trellis = trellis_name;
       var plot = self.get_plot(self.request);
       if (plot) {
         plot.load_edit(seed, self.request);
@@ -294,7 +299,7 @@ var Garden = Meta_Object.subclass('Garden', {
   },
   on_create: function(request) {
     var item = this.vineyard.trellises[request.trellis].create_seed(request.parameters);
-    this.content_panel.load_edit(item, request);
+    this.plot.load_edit(item, request);
     this.invoke('edit', item, request);
   //this.invoke('create', this.vineyard.trellises[request.trellis], request);
   //          Garden.content_panel.load_create(Garden.vineyard.trellises[request.trellis]);
