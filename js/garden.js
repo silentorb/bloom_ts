@@ -205,7 +205,7 @@ var Garden = Meta_Object.subclass('Garden', {
       Garden.methods.grow.call(self);
       if (self.grow !== Garden.methods.grow)
         self.grow();
-//      self.request = self.irrigation.get_request();
+      self.request = self.irrigation.get_request();
       self.process_request(self.request);
     }, this.app_path);
   },
@@ -482,6 +482,7 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
     if (request.id === undefined && request.parameters.id !== undefined)
       request.id = request.parameters.id;
 
+    request.path_string = request.path.join('/');
     return request;
   },
   get_trellis: function(name) {
