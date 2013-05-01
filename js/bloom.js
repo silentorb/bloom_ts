@@ -468,6 +468,9 @@ var Bloom = (function() {
         else
           seed = response[self.seed_name];
 
+        if (seed === undefined) {
+          throw new Error('Could not find valid response data.');
+        }
         self.invoke('update', seed, response);
         if (test) {
           start();

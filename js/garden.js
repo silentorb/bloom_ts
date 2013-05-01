@@ -143,7 +143,7 @@ var Content_Panel = Plot = Flower.sub_class('Content_Panel', {
   set_garden: function(garden) {
     this.garden = garden;
     this.listen(garden, 'index', this.index);
-//    this.listen(garden, 'create', this.load_create);
+  //    this.listen(garden, 'create', this.load_create);
   //    this.listen(garden, 'edit', this.load_edit);
   }
 });
@@ -213,7 +213,7 @@ var Garden = Meta_Object.subclass('Garden', {
     var plot_type = this.get_plot_type(request);
     if (!plot_type)
       return null;
-//      throw new Error('No matching plot could be found.');
+    //      throw new Error('No matching plot could be found.');
     
     return this.create_plot(plot_type);    
   },
@@ -225,7 +225,9 @@ var Garden = Meta_Object.subclass('Garden', {
     if (typeof trellis_name == 'object') {
       var request = trellis_name;
       trellis_name = trellis_name.trellis || trellis_name.name;
-      args = request.parameters;
+      args = args || {};
+      if (request.parameters)
+        args.concat(request.parameters);
       id = request.id;
     }
     
