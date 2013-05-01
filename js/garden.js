@@ -205,7 +205,7 @@ var Garden = Meta_Object.subclass('Garden', {
       Garden.methods.grow.call(self);
       if (self.grow !== Garden.methods.grow)
         self.grow();
-      self.request = self.irrigation.get_request();
+//      self.request = self.irrigation.get_request();
       self.process_request(self.request);
     }, this.app_path);
   },
