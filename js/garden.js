@@ -143,7 +143,7 @@ var Content_Panel = Plot = Flower.sub_class('Content_Panel', {
   set_garden: function(garden) {
     this.garden = garden;
     this.listen(garden, 'index', this.index);
-    this.listen(garden, 'create', this.load_create);
+//    this.listen(garden, 'create', this.load_create);
   //    this.listen(garden, 'edit', this.load_edit);
   }
 });
