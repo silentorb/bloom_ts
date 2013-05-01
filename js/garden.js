@@ -161,6 +161,7 @@ var Garden = Meta_Object.subclass('Garden', {
       Block.source_path = this.block_path;
     
     this.listen(this, 'create', this.on_create);
+    this.listen(this, 'goto', this.goto_item);
   },
   initialize_irrigation: function() {
     var irrigation = Irrigation.create();
@@ -221,8 +222,11 @@ var Garden = Meta_Object.subclass('Garden', {
   },
   goto_item: function(trellis_name, args) {
     var arg_string, self = this;
-    if (typeof trellis_name == 'object')
+    if (typeof trellis_name == 'object') {
+      var request = trellis_name;
       trellis_name = trellis_name.trellis || trellis_name.name;
+      args = request.args;
+    }
     // Ensure arguments are in string form.
     if (typeof args == 'object') {
       arg_string = Bloom.render_query(args);

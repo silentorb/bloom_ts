@@ -686,6 +686,7 @@ var Vineyard = (function () {
             
       if (this.seed.meta_source === Seed) {
         this.trellis = this.seed.trellis;
+        options = {};
       }
       else {
         var options = this.seed;
@@ -694,22 +695,23 @@ var Vineyard = (function () {
         
         this.seed = options.seed;
         this.trellis = options.trellis;
-        if (!this.seed) {
-          this.seed = this.trellis.create_seed();
-        }
-        if (this.trellis) {
-          if (options.view) {
-            this.view = options.view;
-          }
-          else if (options.view !== false) {
-            if (this.trellis.vineyard.views[this.trellis.name]) {
-              this.view = this.trellis.vineyard.views[this.trellis.name];
-            }
-          }
+      }
       
-          this.vineyard = this.trellis.vineyard;      
-          this.generate_vines(this.seed, this.trellis);
+      if (!this.seed) {
+        this.seed = this.trellis.create_seed();
+      }
+      if (this.trellis) {
+        if (options.view) {
+          this.view = options.view;
         }
+        else if (options.view !== false) {
+          if (this.trellis.vineyard.views[this.trellis.name]) {
+            this.view = this.trellis.vineyard.views[this.trellis.name];
+          }
+        }
+      
+        this.vineyard = this.trellis.vineyard;      
+        this.generate_vines(this.seed, this.trellis);        
       }
     },
     create_vine: function(seed, property) {
