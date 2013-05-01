@@ -227,7 +227,7 @@ var Garden = Meta_Object.subclass('Garden', {
       trellis_name = trellis_name.trellis || trellis_name.name;
       args = args || {};
       if (request.parameters)
-        args.concat(request.parameters);
+        args = MetaHub.extend(args, request.parameters);
       id = request.id;
     }
     
