@@ -221,12 +221,14 @@ var Garden = Meta_Object.subclass('Garden', {
     return this.irrigation.get_plot(request.trellis);
   },
   goto_item: function(trellis_name, args) {
-    var arg_string, self = this;
+    var id = null, arg_string, self = this;
     if (typeof trellis_name == 'object') {
       var request = trellis_name;
       trellis_name = trellis_name.trellis || trellis_name.name;
-      args = request.args;
+      args = request.parameters;
+      id = request.id;
     }
+    
     // Ensure arguments are in string form.
     if (typeof args == 'object') {
       arg_string = Bloom.render_query(args);
@@ -236,7 +238,7 @@ var Garden = Meta_Object.subclass('Garden', {
       arg_string = args;
     }
     
-    var query = Bloom.join(this.app_path, 'vineyard', trellis_name, arg_string);
+    var query = Bloom.join(this.app_path, 'vineyard', trellis_name, id, arg_string);
     Bloom.get(query, function(response) {
       if (!response.objects.length) {
         console.log('No objects found with query: ' + query);
