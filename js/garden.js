@@ -53,7 +53,8 @@ var Content_Panel = Plot = Flower.sub_class('Content_Panel', {
         return this.get_arbor(trellis, 'edit');
       }
     }
-    else if (this.arbors[trellis.name])
+    
+    if (this.arbors[trellis.name])
       return this.arbors[trellis.name];
     return this.default_arbor;
   },
