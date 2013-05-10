@@ -1391,11 +1391,18 @@ Bloom.post_json = function(url, seed, success, error) {
   }
 
   var action = function(response) {
-    if ((response.result && response.result.toLowerCase() == 'success') || response.success) {
-      if (success) {
+    var good = true;
+    // All these checks are for backwards compatibility and are deprecated.
+    if (typeof response.result === 'string' && response.result.toLowerCase() != 'success') {
+      good = false;
+    }
+    
+    if (response.success === false) {
+      good = false;
+    }
+    if (good && typeof success === 'function') {
         success(response);
       }
-    }
 
     if (typeof Bloom.output == 'function') {
       Bloom.output(response);
