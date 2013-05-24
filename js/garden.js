@@ -1,6 +1,7 @@
 MetaHub.import_all();
 Bloom.import_all();
 Vineyard.import_all();
+
 var Edit_Arbor = Vineyard.Arbor.sub_class('Edit_Arbor', {
     block: 'edit-form',
     initialize: function (garden) {
@@ -33,7 +34,7 @@ var Edit_Arbor = Vineyard.Arbor.sub_class('Edit_Arbor', {
         });
     }
 });
-var Content_Panel = Plot = Flower.sub_class('Content_Panel', {
+var Plot = Flower.sub_class('Plot', {
     arbors: {},
     default_arbor: Edit_Arbor,
     initialize: function () {
@@ -69,30 +70,9 @@ var Content_Panel = Plot = Flower.sub_class('Content_Panel', {
         var list = Index_List.create(seed);
         this.append(list);
         seed.update();
-        var query = self.garden.initialize_query('?action=create&trellis=' + name);
+        var query = '?action=create&trellis=' + name;
         var create = $('<div class="create"><a href="' + query + '">Create</a></div>');
         this.content.prepend(create);
-    },
-    load_create: function (request) {
-        var item = this.vineyard.trellises[request.trellis].create_seed({});
-        //    var request = Bloom.get_url_properties();
-        //    for (var x in trellis.properties) {
-        //      if (trellis.properties[x] !== undefined && request[x] != undefined) {
-        //        if (trellis.properties[x].trellis)
-        //          item[x] = {
-        //            id: request[x]
-        //          };
-        //        else
-        //          item[x] = request[x];
-        //      }
-        //    }
-
-        var arbor = this.get_arbor(item.trellis, request.action);
-        var edit = arbor.create({
-            seed: item,
-            trellis: item.trellis
-        });
-        this.replace_element(edit);
     },
     load_edit: function (seed, request) {
         if (!seed.trellis)
@@ -121,21 +101,6 @@ var Content_Panel = Plot = Flower.sub_class('Content_Panel', {
         }
 
         this.arbor = edit;
-        //    if (!item.trellis)
-        //      throw new Error('item.trellis = null!');
-        //
-        //    if (this.arbor && typeof this.arbor.refresh == 'function') {
-        //      this.arbor.refresh(item);
-        //    }
-        //    else {
-        //      var arbor = this.get_arbor(item.trellis);
-        //      var edit = arbor.create({
-        //        seed: item,
-        //        trellis: item.trellis
-        //      });
-        //      this.arbor = edit;
-        //      this.replace_element(edit);
-        //    }
     },
     replace_element: function (new_element) {
         this.content.empty();
@@ -253,45 +218,37 @@ var Garden = Meta_Object.subclass('Garden', {
         });
     },
     grow: function() {
-
+        // Intended to be overridden by subclass.
     },
     start: function (next_action) {
         var self = this;
         Bloom.output = this.print;
-        this.initialize_irrigation();
-        window.onpopstate = function (state) {
-            if (!state)
-                return;
-            if (state.direction == 'forward')
-                Content_Panel.direction = 'back';
-            if (state.direction == 'back')
-                Content_Panel.direction = 'forward';
+        this.load(function() {
+            this.initialize_irrigation();
+            window.onpopstate = function (state) {
+                if (!state)
+                    return;
+                if (state.direction == 'forward')
+                    Plot.direction = 'back';
+                if (state.direction == 'back')
+                    Plot.direction = 'forward';
+                self.request = self.irrigation.get_request();
+                self.process_request(self.request);
+            }
+
+            self.grow();
             self.request = self.irrigation.get_request();
             self.process_request(self.request);
-        }
 
-        this.grow();
-        self.request = self.irrigation.get_request();
-        self.process_request(self.request);
+            self.invoke('initialize');
+        });
 
-        this.invoke('initialize');
-    },
-    initialize_query: function (query) {
-        return query;
     },
     lightning: function (url, silent) {
-        //    var url;
-
-        //    if (arguments.length < 2) {
-        //      url = trellis;
-        //    }
-        //    else {
-        //      url = Bloom.join(this.app_path, trellis.name, action) + Bloom.render_query(args);
-        //    }
         if (!silent) {
             history.pushState({
                 name: 'garden',
-                direction: Content_Panel.direction
+                direction: Plot.direction
             }, '', url);
         }
 
@@ -492,6 +449,7 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
         return name;
     }
 });
+
 Irrigation.convert_path_to_array = function (path) {
     if (typeof path == 'object')
         return path;
