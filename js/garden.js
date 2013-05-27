@@ -34,6 +34,11 @@ var Edit_Arbor = Vineyard.Arbor.sub_class('Edit_Arbor', {
         });
     }
 });
+
+// The primary content area of the page.  A placeholder for arbors.
+// It's sort of like Arbors are the pages and Plot is the viewport.
+// However, the complicated nature of webpages means that sometimes
+// Different plots are required for different arbors.
 var Plot = Flower.sub_class('Plot', {
     arbors: {},
     default_arbor: Edit_Arbor,
@@ -114,6 +119,20 @@ var Plot = Flower.sub_class('Plot', {
     }
 });
 
+// Garden - The central web app.  Intended to be subclassed once per project
+// Mainly it ties together Vineyard, Irrigation, and Mulch.
+// garden.grow() is the primary method for defining a Garden,
+// because it is called after the sub-systems such as Mulch
+// are loaded.
+
+/* Recommended method to start an app:
+
+ $(function() {
+ Garden.app = Garden.create();
+ Garden.app.start();
+ });
+
+ */
 var Garden = Meta_Object.subclass('Garden', {
     plot_container: '',
     dirt: {
@@ -128,12 +147,28 @@ var Garden = Meta_Object.subclass('Garden', {
 
         this.listen(this, 'create', this.on_create);
         this.listen(this, 'goto', this.goto_item);
+        Bloom.output = this.print;
     },
     initialize_irrigation: function () {
         var irrigation = Irrigation.create();
         this.irrigation = irrigation
         irrigation.page_path = this.page_path;
         irrigation.app_path = this.app_path;
+        this.initialize_history_change();
+    },
+    initialize_history_change: function () {
+        var self = this;
+        window.onpopstate = function (state) {
+            if (!state)
+                return;
+            if (state.direction == 'forward')
+                Plot.direction = 'back';
+            if (state.direction == 'back')
+                Plot.direction = 'forward';
+            self.request = self.irrigation.get_request();
+            self.process_request(self.request);
+        }
+
     },
     attach_model: function (model) {
         model = model || {
@@ -157,17 +192,6 @@ var Garden = Meta_Object.subclass('Garden', {
         plot_container.append(plot.element);
         this.plot = plot;
         return plot;
-    },
-    fertilize: function (callback) {
-        var self = this;
-        this.dirt.model = {
-            handfulls: ['model'],
-            fertilizer: function (model) {
-                self.attach_model(JSON.parse(model));
-            },
-            url: Bloom.join(this.app_path, 'vineyard/model.json')
-        };
-        Bloom.Mulch.fertilize(this.dirt, callback, this.app_path);
     },
     get_plot: function (request) {
         var plot_type = this.get_plot_type(request);
@@ -217,32 +241,8 @@ var Garden = Meta_Object.subclass('Garden', {
             }
         });
     },
-    grow: function() {
+    grow: function () {
         // Intended to be overridden by subclass.
-    },
-    start: function (next_action) {
-        var self = this;
-        Bloom.output = this.print;
-        this.load(function() {
-            this.initialize_irrigation();
-            window.onpopstate = function (state) {
-                if (!state)
-                    return;
-                if (state.direction == 'forward')
-                    Plot.direction = 'back';
-                if (state.direction == 'back')
-                    Plot.direction = 'forward';
-                self.request = self.irrigation.get_request();
-                self.process_request(self.request);
-            }
-
-            self.grow();
-            self.request = self.irrigation.get_request();
-            self.process_request(self.request);
-
-            self.invoke('initialize');
-        });
-
     },
     lightning: function (url, silent) {
         if (!silent) {
@@ -258,7 +258,7 @@ var Garden = Meta_Object.subclass('Garden', {
     },
     load: function (callback) {
         this.load_landscape();
-        this.fertilize(callback);
+        this.load_resources(callback);
     },
     load_landscape: function () {
         var landscape_element = $('#garden-landscape');
@@ -266,6 +266,17 @@ var Garden = Meta_Object.subclass('Garden', {
             var settings = JSON.parse(landscape_element.text());
             MetaHub.extend(this, settings);
         }
+    },
+    load_resources: function (callback) {
+        var self = this;
+        this.dirt.model = {
+            handfulls: ['model'],
+            fertilizer: function (model) {
+                self.attach_model(JSON.parse(model));
+            },
+            url: Bloom.join(this.app_path, 'vineyard/model.json')
+        };
+        Bloom.Mulch.load_resources(this.dirt, callback, this.app_path);
     },
     on_create: function (request) {
         var item = this.vineyard.trellises[request.trellis].create_seed(request.parameters);
@@ -289,7 +300,7 @@ var Garden = Meta_Object.subclass('Garden', {
         container.append($('<div>' + response.message + '</div>'));
     },
     process_request: function (request) {
-        console.log(request);
+//        console.log(request);
         //    if (request.trellis && this.vineyard.trellises[request.trellis]) {
         this.get_plot(request);
 
@@ -303,6 +314,28 @@ var Garden = Meta_Object.subclass('Garden', {
         else {
             throw new Error("Invalid action type.");
         }
+    },
+    start: function (callback) {
+        var self = this;
+
+        // First load the app data
+        this.load(function () {
+
+            // Then finish initializing
+            self.initialize_irrigation();
+            self.grow();
+
+            // Then process the request (based on the browser url).
+            self.request = self.irrigation.get_request();
+            self.process_request(self.request);
+
+            // Then let the world know your ready.
+            if (typeof callback == 'function')
+                callback();
+
+            self.invoke('live');
+        });
+
     }
 });
 Garden.grow = function (testing, garden) {
@@ -311,7 +344,7 @@ Garden.grow = function (testing, garden) {
 
     jQuery(function () {
         garden.load_landscape();
-        garden.fertilize();
+        garden.load_resources();
     });
     return garden;
 }

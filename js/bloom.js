@@ -16,7 +16,7 @@ var Bloom = (function() {
   var Mulch = {
     dirt: {},
     add: function(type, names, fertilizer, url) {
-      // This may change down the road, but currently fertilize() can be called
+      // This may change down the road, but currently load_resources() can be called
       // multiple times.  Because of that, Mulch prevents overwriting of dirt types
       // or there would be redundant calls to the server.  If two scripts are
       // using the same dirt type they need to coordinate the composition of that
@@ -33,7 +33,7 @@ var Bloom = (function() {
     },
     // Originally this simply took a function, but that has been deprecated
     // in favor of also passing a list of blocks as 'dirt'.
-    fertilize: function(pile, onfinished) {
+    load_resources: function(pile, onfinished) {
       if (typeof pile == 'function') {
         onfinished = pile;
       }
@@ -48,7 +48,7 @@ var Bloom = (function() {
 
       // A valid callback is required because otherwise Mulch is pointless.
       if (typeof onfinished != 'function')
-        throw new Error('Mulch.fertilize() requires a callback function.');
+        throw new Error('Mulch.load_resources() requires a callback function.');
 
       Mulch.load_finished = onfinished;
       for (var type in Mulch.dirt) {
@@ -1554,7 +1554,7 @@ Bloom.initialize_page = function(Page) {
         Page.initialize_core();
       }
       Page.load(Mulch);
-      Mulch.fertilize(function() {
+      Mulch.load_resources(function() {
         Page.initialize();
       });
     }

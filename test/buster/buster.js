@@ -5,7 +5,7 @@ config["Bloom tests"] = {
   environment: "browser", // or "node"
   sources: [
   "extern/jquery-1.7.1.min.js",
-  "js/metahub.js",
+  "lib/metahub.js",
   "js/bloom.js",
   "js/vineyard.js",
   "js/garden.js",
