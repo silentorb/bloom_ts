@@ -256,10 +256,7 @@ var Garden = Meta_Object.subclass('Garden', {
         this.request = this.irrigation.get_request();
         this.process_request(this.request);
     },
-    load: function (callback) {
-        this.load_landscape();
-        this.load_resources(callback);
-    },
+    // Loads data embedded in the web page
     load_landscape: function () {
         var landscape_element = $('#garden-landscape');
         if (landscape_element.length) {
@@ -319,7 +316,9 @@ var Garden = Meta_Object.subclass('Garden', {
         var self = this;
 
         // First load the app data
-        this.load(function () {
+        this.load_landscape();
+        this.invoke('landscape');
+        this.load_resources(function () {
 
             // Then finish initializing
             self.initialize_irrigation();
@@ -355,6 +354,7 @@ var Index_Item = Flower.sub_class('Index_Item', {
         this.element.find('a').attr('href', this.seed.get_url('page'));
     }
 });
+
 var Child_Item = Index_Item.sub_class('Child_Item', {
     initialize: function () {
         var self = this;
@@ -383,7 +383,82 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
     page_path: '',
     trellis_plots: {},
     trellis_map: {},
-    channels: {},
+    channels: [],
+    parameters: {
+        trellis: 'trellis',
+        id: 'int',
+        action: 'string'
+    },
+    initialize: function () {
+        this.add_channel(['%trellis', '%id', '%action']);
+        this.add_channel(['%trellis', '%id']);
+        this.add_channel(['%trellis', '%action']);
+        this.add_channel(['%trellis']);
+    },
+    add_channel: function (pattern, action) {
+        var result = {
+            pattern: pattern,
+            action: action
+        };
+        this.channels.push(result);
+        return result;
+    },
+    apply_channel: function (path, channel) {
+        var result = {};
+        for (var i = 0; i < path.length; ++i) {
+            var part = channel[i];
+            if (part[0] == '%') {
+                var type = part[0].substring(1);
+                result[type] = this.convert_value(path[i], type);
+            }
+        }
+
+        return result;
+    },
+    compare: function (a, b) {
+        a = Irrigation.convert_path_to_array(a);
+        b = Irrigation.convert_path_to_array(b);
+
+        if (a.length != b.length)
+            return false;
+
+        for (var i = 0; i < a.length; i++) {
+            if (a[i] == '*' || b[i] == '*')
+                continue;
+
+            if (a[i][0] == '%' && this.compare_parts(a[i], b[i]))
+                continue;
+
+            if (b[i][0] == '%' && this.compare_parts(b[i], a[i]))
+                continue;
+
+            if (a[i] != b[i])
+                return false;
+        }
+
+        return true;
+    },
+    compare_parts: function (name, value) {
+        var type = this.parameters[name.substring(1)];
+        if (this.convert_value(value, type) === null)
+            return false;
+        else
+            return true;
+    },
+    convert_value: function (value, type) {
+        switch (type) {
+            case 'trellis':
+                return this.get_trellis(value);
+            case 'int':
+                if (!value.toString().match(/\d+/))
+                    return null;
+                return parseInt(value);
+            case 'string':
+                return value.toString();
+        }
+
+        return value;
+    },
     determine_action: function (request, vineyard) {
         if (request.trellis && vineyard.trellises[request.trellis]) {
             if (request.action == 'create') {
@@ -397,13 +472,23 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
             }
         }
 
-        for (var path in this.channels) {
-            if (Irrigation.compare(path, request.path)) {
-                return this.channels[path];
+//        for (var path in this.late_channels) {
+//            if (this.compare(path, request.path)) {
+//                return this.late_channels[path];
+//            }
+//        }
+
+        return 'other';
+    },
+    find_channel: function (path) {
+        for (var i = 0; i < this.channels.length; i++) {
+            var channel = this.channels[i];
+            if (this.compare(path, channel.pattern)) {
+                return channel;
             }
         }
 
-        return 'other';
+        return null;
     },
     // Eventually parameters will be passed to this, but right now it's very simple.
     get_channel: function (type) {
@@ -453,10 +538,15 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
     get_request_from_string: function (path_string) {
         var path = Irrigation.get_path_array(path_string, Bloom.join(this.app_path, this.page_path));
         var request = {
-            'parameters': Bloom.get_url_properties(),
-            path: path,
-            trellis: path[0]
+            parameters: Bloom.get_url_properties(),
+            path: path
+//            trellis: path[0]
         };
+
+        var channel = this.find_channel(path);
+        if (channel)
+            MetaHub.extend(request, this.apply_channel(path, channel.pattern));
+
         if (path.length > 1) {
             if (path.length > 2) {
                 request.id = path[1];
@@ -469,7 +559,6 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
                     request.action = path[1];
             }
         }
-
         if (request.id === undefined && request.parameters.id !== undefined)
             request.id = request.parameters.id;
 
@@ -510,25 +599,4 @@ Irrigation.get_path_array = function (path, base) {
     }
 
     return path;
-}
-
-Irrigation.compare = function (a, b) {
-    a = Irrigation.convert_path_to_array(a);
-    b = Irrigation.convert_path_to_array(b);
-
-    if (a.length != b.length)
-        return false;
-
-    for (var i = 0; i < a.length; i++) {
-        if (a[i] == '*' || b[i] == '*')
-            continue;
-
-        if (a[i] == '%' || b[i] == '%')
-            continue;
-
-        if (a[i] != b[i])
-            return false;
-    }
-
-    return true;
 }

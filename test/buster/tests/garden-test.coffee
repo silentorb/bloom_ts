@@ -10,6 +10,7 @@ new Block('simple-div', '<div></div>')
 Fixtures.Test_Plot = Plot.subclass('Test_Plot',
   block: 'simple-div'
 )
+
 buster.testCase 'Irrigation',
   'Garden.get_path_array': ->
     result = Irrigation.get_path_array('home/item/action', 'home')
@@ -28,6 +29,33 @@ buster.testCase 'Irrigation',
     assert.equals result[0], 'item'
     assert.equals result[1], 12
 
+  initialize: ->
+    irrigation = Fixtures.create_garden().irrigation
+    assert.greater irrigation.channels.length, 3
+
+  compare: ->
+    irrigation = Fixtures.create_garden().irrigation
+    assert irrigation.compare(irrigation.channels[3].pattern, 'warrior')
+
+    assert irrigation.compare('hello/frog', 'hello/frog')
+    assert irrigation.compare('hello/frog', 'hello/*')
+    assert irrigation.compare('hello/frog', ['hello', 'frog'])
+    assert irrigation.compare(['*', 'frog'], ['hello', 'frog'])
+    refute irrigation.compare(['*', 'frog'], 'b/c')
+    refute irrigation.compare('hello/frog', ['hello', 'frog', '2'])
+
+  find_channel: ->
+    irrigation = Fixtures.create_garden().irrigation
+    channel = irrigation.find_channel('warrior/take')
+    assert.isObject channel
+    assert.equals channel.pattern[0], '%trellis'
+    assert.equals channel.pattern[1], '%action'
+
+    channel = irrigation.find_channel('warrior/10')
+    assert.isObject channel
+    assert.equals channel.pattern[0], '%trellis'
+    assert.equals channel.pattern[1], '%id'
+
   get_plot: ->
     irrigation = Fixtures.create_garden().irrigation
     irrigation.trellis_plots.warrior = Fixtures.Test_Plot
@@ -35,30 +63,22 @@ buster.testCase 'Irrigation',
     assert plot_type
     assert.same plot_type.name, 'Test_Plot'
 
-  get_request: ->
-    #    var original_url = window.location.pathname;
-    history.pushState {}, '', '/dream/world/door/12'
-    assert.equals '/dream/world/door/12', location.pathname
-    irrigation = Fixtures.create_garden().irrigation
-    request = irrigation.get_request()
-    assert.equals request.path.length, 2
-    assert.equals request.trellis, 'door'
-    assert.equals request.id, 12
-    history.pushState {}, '', '/dream/world/door/create'
-    request = irrigation.get_request()
-    assert.equals request.action, 'create'
-    history.pushState {}, '', '/dream/world/door/12/delete'
-    request = irrigation.get_request()
-    assert.equals request.action, 'delete'
-    assert.equals request.id, 12
-
-  compare: ->
-    assert Irrigation.compare('hello/frog', 'hello/frog')
-    assert Irrigation.compare('hello/frog', 'hello/*')
-    assert Irrigation.compare('hello/frog', ['hello', 'frog'])
-    assert Irrigation.compare(['*', 'frog'], ['hello', 'frog'])
-    refute Irrigation.compare(['*', 'frog'], 'b/c')
-    refute Irrigation.compare('hello/frog', ['hello', 'frog', '2'])
+#  get_request: ->
+#    #    var original_url = window.location.pathname;
+#    history.pushState {}, '', '/dream/world/door/12'
+#    assert.equals '/dream/world/door/12', location.pathname
+#    irrigation = Fixtures.create_garden().irrigation
+#    request = irrigation.get_request()
+#    assert.equals request.path.length, 2
+#    assert.equals request.trellis, 'door'
+#    assert.equals request.id, 12
+#    history.pushState {}, '', '/dream/world/door/create'
+#    request = irrigation.get_request()
+#    assert.equals request.action, 'create'
+#    history.pushState {}, '', '/dream/world/door/12/delete'
+#    request = irrigation.get_request()
+#    assert.equals request.action, 'delete'
+#    assert.equals request.id, 12
 
 buster.testCase 'Garden',
   setUp: ->
