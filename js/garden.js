@@ -544,8 +544,12 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
         };
 
         var channel = this.find_channel(path);
-        if (channel)
+        if (channel) {
             MetaHub.extend(request, this.apply_channel(path, channel.pattern));
+
+            if (typeof channel.action === 'function')
+                MetaHub.extend(request, channel.action(path));
+        }
 
         if (path.length > 1) {
             if (path.length > 2) {
