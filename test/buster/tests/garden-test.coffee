@@ -146,8 +146,3 @@ buster.testCase 'Seed',
     assert.isObject @garden.vineyard
     assert.isObject @garden.vineyard.trellises
     assert.isObject @garden.vineyard.trellises['warrior']
-
-  test_get_url: ->
-    seed = @garden.vineyard.trellises['warrior'].create_seed()
-    seed.id = 12
-    assert.equals seed.get_url('page'), 'dream/world/warrior/12'

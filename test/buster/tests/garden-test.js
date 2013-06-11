@@ -148,11 +148,5 @@ buster.testCase('Seed', {
     assert.isObject(this.garden.vineyard);
     assert.isObject(this.garden.vineyard.trellises);
     return assert.isObject(this.garden.vineyard.trellises['warrior']);
-  },
-  test_get_url: function() {
-    var seed;
-    seed = this.garden.vineyard.trellises['warrior'].create_seed();
-    seed.id = 12;
-    return assert.equals(seed.get_url('page'), 'dream/world/warrior/12');
   }
 });

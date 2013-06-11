@@ -398,7 +398,7 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
     },
     add_channel: function (pattern, action) {
         var result = {
-            pattern: pattern,
+            pattern: Irrigation.convert_path_to_array(pattern),
             action: action
         };
         this.channels.push(result);
