@@ -56,6 +56,9 @@ buster.testCase 'Irrigation',
     assert.equals channel.pattern[0], '%trellis'
     assert.equals channel.pattern[1], '%id'
 
+    channel = irrigation.find_channel('warrior2/10')
+    assert.isNull channel
+
   get_plot: ->
     irrigation = Fixtures.create_garden().irrigation
     irrigation.trellis_plots.warrior = Fixtures.Test_Plot

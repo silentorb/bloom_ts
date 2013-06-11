@@ -150,7 +150,7 @@ var Garden = Meta_Object.subclass('Garden', {
         Bloom.output = this.print;
     },
     initialize_irrigation: function () {
-        var irrigation = Irrigation.create();
+        var irrigation = Irrigation.create(this.vineyard);
         this.irrigation = irrigation
         irrigation.page_path = this.page_path;
         irrigation.app_path = this.app_path;
@@ -328,7 +328,7 @@ var Garden = Meta_Object.subclass('Garden', {
             self.request = self.irrigation.get_request();
             self.process_request(self.request);
 
-            // Then let the world know your ready.
+            // Then let the world know you're ready.
             if (typeof callback == 'function')
                 callback();
 
@@ -382,14 +382,15 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
     app_path: '',
     page_path: '',
     trellis_plots: {},
-    trellis_map: {},
     channels: [],
     parameters: {
         trellis: 'trellis',
         id: 'int',
         action: 'string'
     },
-    initialize: function () {
+    vineyard: null,
+    initialize: function (vineyard) {
+        this.vineyard = vineyard;
         this.add_channel(['%trellis', '%id', '%action']);
         this.add_channel(['%trellis', '%id']);
         this.add_channel(['%trellis', '%action']);
@@ -459,8 +460,8 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
 
         return value;
     },
-    determine_action: function (request, vineyard) {
-        if (request.trellis && vineyard.trellises[request.trellis]) {
+    determine_action: function (request) {
+        if (request.trellis && this.vineyard.trellises[request.trellis]) {
             if (request.action == 'create') {
                 return 'create';
             }
@@ -570,9 +571,10 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
         return request;
     },
     get_trellis: function (name) {
-        if (this.trellis_map[name] !== undefined)
-            return this.trellis_map[name];
-        return name;
+        if (this.vineyard.trellises[name])
+            return name;
+//            return this.vineyard.trellises[name];
+        return null;
     }
 });
 
