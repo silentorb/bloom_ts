@@ -20,6 +20,9 @@ Fixtures.Test_Plot = Plot.subclass('Test_Plot', {
 });
 
 buster.testCase('Irrigation', {
+  setUp: function() {
+    return this.irrigation = Fixtures.create_garden().irrigation;
+  },
   'Garden.get_path_array': function() {
     var result;
     result = Irrigation.get_path_array('home/item/action', 'home');
@@ -44,37 +47,45 @@ buster.testCase('Irrigation', {
     return assert.greater(irrigation.channels.length, 3);
   },
   compare: function() {
-    var irrigation;
-    irrigation = Fixtures.create_garden().irrigation;
-    assert(irrigation.compare(irrigation.channels[3].pattern, 'warrior'));
-    assert(irrigation.compare('hello/frog', 'hello/frog'));
-    assert(irrigation.compare('hello/frog', 'hello/*'));
-    assert(irrigation.compare('hello/frog', ['hello', 'frog']));
-    assert(irrigation.compare(['*', 'frog'], ['hello', 'frog']));
-    refute(irrigation.compare(['*', 'frog'], 'b/c'));
-    return refute(irrigation.compare('hello/frog', ['hello', 'frog', '2']));
+    assert(this.irrigation.compare(this.irrigation.channels[3].pattern, 'warrior'));
+    assert(this.irrigation.compare('hello/frog', 'hello/frog'));
+    assert(this.irrigation.compare('hello/frog', 'hello/*'));
+    assert(this.irrigation.compare('hello/frog', ['hello', 'frog']));
+    assert(this.irrigation.compare(['*', 'frog'], ['hello', 'frog']));
+    refute(this.irrigation.compare(['*', 'frog'], 'b/c'));
+    return refute(this.irrigation.compare('hello/frog', ['hello', 'frog', '2']));
   },
   find_channel: function() {
-    var channel, irrigation;
-    irrigation = Fixtures.create_garden().irrigation;
-    channel = irrigation.find_channel('warrior/take');
+    var channel;
+    channel = this.irrigation.find_channel('warrior/take');
     assert.isObject(channel);
     assert.equals(channel.pattern[0], '%trellis');
     assert.equals(channel.pattern[1], '%action');
-    channel = irrigation.find_channel('warrior/10');
+    channel = this.irrigation.find_channel('warrior/10');
     assert.isObject(channel);
     assert.equals(channel.pattern[0], '%trellis');
     assert.equals(channel.pattern[1], '%id');
-    channel = irrigation.find_channel('warrior2/10');
+    channel = this.irrigation.find_channel('warrior2/10');
     return assert.isNull(channel);
   },
   get_plot: function() {
-    var irrigation, plot_type;
-    irrigation = Fixtures.create_garden().irrigation;
-    irrigation.trellis_plots.warrior = Fixtures.Test_Plot;
-    plot_type = irrigation.get_plot('warrior');
+    var plot_type;
+    this.irrigation.trellis_plots.warrior = Fixtures.Test_Plot;
+    plot_type = this.irrigation.get_plot('warrior');
     assert(plot_type);
     return assert.same(plot_type.name, 'Test_Plot');
+  },
+  apply_pattern: function() {
+    var channel, result;
+    channel = this.irrigation.find_channel('warrior');
+    assert(channel);
+    result = this.irrigation.apply_pattern(['warrior'], channel.pattern);
+    return assert.equals(result.trellis, 'warrior');
+  },
+  get_request_from_string: function() {
+    var request;
+    request = this.irrigation.get_request_from_string('warrior');
+    return assert.equals(request.trellis, 'warrior');
   }
 });
 

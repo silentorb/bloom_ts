@@ -12,6 +12,9 @@ Fixtures.Test_Plot = Plot.subclass('Test_Plot',
 )
 
 buster.testCase 'Irrigation',
+  setUp: ->
+    @irrigation = Fixtures.create_garden().irrigation
+
   'Garden.get_path_array': ->
     result = Irrigation.get_path_array('home/item/action', 'home')
     assert.equals result[0], 'item'
@@ -34,37 +37,44 @@ buster.testCase 'Irrigation',
     assert.greater irrigation.channels.length, 3
 
   compare: ->
-    irrigation = Fixtures.create_garden().irrigation
-    assert irrigation.compare(irrigation.channels[3].pattern, 'warrior')
+    assert @irrigation.compare(@irrigation.channels[3].pattern, 'warrior')
 
-    assert irrigation.compare('hello/frog', 'hello/frog')
-    assert irrigation.compare('hello/frog', 'hello/*')
-    assert irrigation.compare('hello/frog', ['hello', 'frog'])
-    assert irrigation.compare(['*', 'frog'], ['hello', 'frog'])
-    refute irrigation.compare(['*', 'frog'], 'b/c')
-    refute irrigation.compare('hello/frog', ['hello', 'frog', '2'])
+    assert @irrigation.compare('hello/frog', 'hello/frog')
+    assert @irrigation.compare('hello/frog', 'hello/*')
+    assert @irrigation.compare('hello/frog', ['hello', 'frog'])
+    assert @irrigation.compare(['*', 'frog'], ['hello', 'frog'])
+    refute @irrigation.compare(['*', 'frog'], 'b/c')
+    refute @irrigation.compare('hello/frog', ['hello', 'frog', '2'])
 
   find_channel: ->
-    irrigation = Fixtures.create_garden().irrigation
-    channel = irrigation.find_channel('warrior/take')
+    channel = @irrigation.find_channel('warrior/take')
     assert.isObject channel
     assert.equals channel.pattern[0], '%trellis'
     assert.equals channel.pattern[1], '%action'
 
-    channel = irrigation.find_channel('warrior/10')
+    channel = @irrigation.find_channel('warrior/10')
     assert.isObject channel
     assert.equals channel.pattern[0], '%trellis'
     assert.equals channel.pattern[1], '%id'
 
-    channel = irrigation.find_channel('warrior2/10')
+    channel = @irrigation.find_channel('warrior2/10')
     assert.isNull channel
 
   get_plot: ->
-    irrigation = Fixtures.create_garden().irrigation
-    irrigation.trellis_plots.warrior = Fixtures.Test_Plot
-    plot_type = irrigation.get_plot('warrior')
+    @irrigation.trellis_plots.warrior = Fixtures.Test_Plot
+    plot_type = @irrigation.get_plot('warrior')
     assert plot_type
     assert.same plot_type.name, 'Test_Plot'
+
+  apply_pattern: ->
+    channel = @irrigation.find_channel('warrior')
+    assert channel
+    result = @irrigation.apply_pattern(['warrior'], channel.pattern)
+    assert.equals result.trellis, 'warrior'
+
+  get_request_from_string: ->
+    request = @irrigation.get_request_from_string('warrior')
+    assert.equals request.trellis, 'warrior'
 
 #  get_request: ->
 #    #    var original_url = window.location.pathname;

@@ -404,12 +404,22 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
         this.channels.push(result);
         return result;
     },
-    apply_channel: function (path, channel) {
+    apply_pattern: function (path, channel) {
+        if (typeof path !== 'object')
+            throw new Error('path must be an array');
+
+        if (typeof channel !== 'object')
+            throw new Error('channel must be an array');
+
+        if (path.length !== channel.length)
+            throw new Error('Irrigation.apply_pattern() requires a path and channel with the same length. (path.length = ' +
+                path.length + '. channel.length = ' + channel.length + '.)');
+
         var result = {};
         for (var i = 0; i < path.length; ++i) {
             var part = channel[i];
             if (part[0] == '%') {
-                var type = part[0].substring(1);
+                var type = part.substring(1);
                 result[type] = this.convert_value(path[i], type);
             }
         }
@@ -546,7 +556,7 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
 
         var channel = this.find_channel(path);
         if (channel) {
-            MetaHub.extend(request, this.apply_channel(path, channel.pattern));
+            MetaHub.extend(request, this.apply_pattern(path, channel.pattern));
 
             if (typeof channel.action === 'function')
                 MetaHub.extend(request, channel.action(path));
