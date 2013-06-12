@@ -137,10 +137,6 @@ buster.testCase 'Garden',
 
     assert callback.called
 
-buster.testCase 'Seed',
-  setUp: ->
-    @garden = Fixtures.create_garden()
-
   test_load_model: ->
     assert.isObject @garden
     assert.isObject @garden.vineyard

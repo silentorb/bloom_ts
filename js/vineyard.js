@@ -181,18 +181,22 @@ var Vineyard = (function () {
                             for (i = 0; i < list.length; i++) {
                                 //var child = list[i] = Seed.create(list[i], property.target_trellis);
                                 var child = list[i] = property.target_trellis.create_seed(list[i]);
+                                child._is_proxy = true;
                                 child.connect(seed, 'parent', property.target_trellis.name);
                             }
                         }
                     }
                     else if (property.type == 'reference') {
-                        if (seed[name] && seed[name].id == source[name])
+                        if (seed[name] && seed[name].id == source[name]) {
+                            seed[name]._is_proxy = true;
                             continue;
+                        }
 
                         if (!source[name])
                             continue;
 
-                        seed[name] = property.target_trellis.create_seed(source[name], { _is_proxy: true });
+                        seed[name] = property.target_trellis.create_seed(source[name]);
+                        seed[name]._is_proxy = true;
                     }
                     else {
                         if (typeof source[name] !== 'undefined')

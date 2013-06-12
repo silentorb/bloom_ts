@@ -136,12 +136,6 @@ buster.testCase('Garden', {
       "Content-Type": "application/json"
     }, '[{ "id": 12, "comment": "Hey there" }]');
     return assert(callback.called);
-  }
-});
-
-buster.testCase('Seed', {
-  setUp: function() {
-    return this.garden = Fixtures.create_garden();
   },
   test_load_model: function() {
     assert.isObject(this.garden);
