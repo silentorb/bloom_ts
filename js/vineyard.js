@@ -179,6 +179,9 @@ var Vineyard = (function () {
 
                         if (list && list.length) {
                             for (i = 0; i < list.length; i++) {
+                                if (list[0].meta_source === Seed)
+                                    continue;
+
                                 //var child = list[i] = Seed.create(list[i], property.target_trellis);
                                 var child = list[i] = property.target_trellis.create_seed(list[i]);
                                 child._is_proxy = true;
@@ -187,9 +190,15 @@ var Vineyard = (function () {
                         }
                     }
                     else if (property.type == 'reference') {
-                        if (seed[name] && seed[name].id == source[name]) {
-                            seed[name]._is_proxy = true;
-                            continue;
+
+                        if (seed[name]) {
+                            if (seed[name].meta_source === Seed)
+                                continue;
+
+                            if (seed[name].id == source[name]) {
+                                seed[name]._is_proxy = true;
+                                continue;
+                            }
                         }
 
                         if (!source[name])

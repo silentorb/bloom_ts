@@ -524,7 +524,7 @@ var Bloom = (function() {
       this.listen(this, 'disconnect.child', this.remove_element);
       if (typeof this.seed == 'object') {
         // When a seed is a simple array or object, the flower is usually responsible
-        // for population, so watching is optional.  When using a Meta_Object, 
+        // for population, so watching is optional.  When using a Meta_Object,
         // the Meta_Object is responsible for population so it is rare that it
         // should not be watched.
         if (this.seed.is_meta_object)
@@ -974,7 +974,7 @@ var Bloom = (function() {
        // This is going to cause problems down the line and should eventually be done differently.
        $(window).unbind();
        self.invoke('close');
-       }     
+       }
        };*/
     },
     close: function() {
@@ -1296,11 +1296,20 @@ Bloom.join = function() {
     args.push(x);
   }
 
+  if (args.length === 0)
+    return '';
+
   for (var i = 0; i < args.length - 1; ++i) {
     var x = args[i];
     if (x[x.length - 1] == '/') {
       args[i] = x.substring(0, x.length - 1);
     }
+  }
+
+  // Ensure that arguments don't have a slash in front of them.
+  // Not essential but leads to cleaner output.
+  if (args.length > 1 && args[args.length - 1][0] == '?') {
+     args[args.length - 2] += args.pop();
   }
 
   return args.join('/');
@@ -1341,7 +1350,7 @@ Bloom.get = function(url, action, error, sync) {
       throw new Error(status + ': ' + message + ' for ' + url);
     }
   }
-  
+
   jQuery.ajax({
     type: 'GET',
     url: url,
@@ -1396,7 +1405,7 @@ Bloom.post_json = function(url, seed, success, error) {
     if (typeof response.result === 'string' && response.result.toLowerCase() != 'success') {
       good = false;
     }
-    
+
     if (response.success === false) {
       good = false;
     }
@@ -1562,6 +1571,9 @@ Bloom.initialize_page = function(Page) {
 }
 
 Bloom.render_query = function(parameters) {
+    if (!parameters || typeof parameters !== 'object')
+    return '';
+
   var result = MetaHub.extend({}, parameters);
   var query = '';
   MetaHub.extend(result, this.parameters);
