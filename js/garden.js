@@ -225,6 +225,9 @@ var Garden = Meta_Object.subclass('Garden', {
 //        }
 
         this.load_seed(trellis_name, id, args, function (seed) {
+            if (!seed)
+                return;
+
             self.request.trellis = trellis_name;
             var plot = self.get_plot(self.request);
             if (plot) {

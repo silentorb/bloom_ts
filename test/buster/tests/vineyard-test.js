@@ -105,5 +105,21 @@ buster.testCase('Seed', {
     refute(seed._is_proxy, 'main seed is not marked proxy');
     assert.equals(seed.inventory[0].id, 30);
     return assert(seed.inventory[0]._is_proxy, 'sub object is marked proxy');
+  },
+  prepare_for_planting: function() {
+    var orc, seed, sword, trellis;
+    trellis = this.vineyard.trellises.warrior;
+    sword = this.vineyard.trellises.character_item.create_seed({
+      name: 'orc slayer'
+    });
+    orc = trellis.create_seed({
+      race: 'orc'
+    });
+    sword.owner = orc;
+    orc.inventory = [sword];
+    seed = Seed.prepare_for_planting(orc, trellis);
+    console.log(seed);
+    assert.equals('orc slayer', seed.inventory[0].name);
+    return assert.equals('undefined', typeof seed.inventory[0].owner);
   }
 });

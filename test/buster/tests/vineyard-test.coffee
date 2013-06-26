@@ -97,3 +97,21 @@ buster.testCase 'Seed',
     assert.equals seed.inventory[0].id, 30
     assert seed.inventory[0]._is_proxy, 'sub object is marked proxy'
 
+  prepare_for_planting: ->
+    trellis = @vineyard.trellises.warrior
+
+    sword = @vineyard.trellises.character_item.create_seed
+      name: 'orc slayer'
+
+    orc = trellis.create_seed
+      race: 'orc'
+
+    sword.owner = orc
+    orc.inventory = [ sword ]
+
+    seed = Seed.prepare_for_planting orc, trellis
+    console.log seed
+
+    assert.equals 'orc slayer', seed.inventory[0].name
+    assert.equals 'undefined', typeof(seed.inventory[0].owner)
+

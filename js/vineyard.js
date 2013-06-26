@@ -156,6 +156,9 @@ var Vineyard = (function () {
                     seed[name] = source[name];
                 }
                 else {
+                    if (property.private)
+                        continue;
+
                     if (source[name] === undefined) {
                         if (property.insert_trellis) {
                             seed[name] = this.name;
@@ -252,12 +255,7 @@ var Vineyard = (function () {
             if (this._is_proxy)
                 throw new Error("Cannot plant proxy seeds.");
 
-            var bag = {
-                seeds: [],
-                depth: 0
-            };
-
-            var self = this, item = this._prepare_for_planting(bag);
+            var self = this, item = Seed.prepare_for_planting(this, this.trellis);
             var data = {
                 objects: [ item ]
             };
@@ -286,83 +284,82 @@ var Vineyard = (function () {
 
                 }
             });
-        },
-        _prepare_for_planting: function (bag) {
-            //      if (!bag)
-            //        throw new Error('A valid bag object is required for planting.');
-            //
-            //    if (bag.depth > trellis.vineyard.max_plant_depth)
-            //      throw new Error('Infinite loop detected during planting.');
-
-            ++bag.depth;
-            var property, name, type, item = {}, p;
-
-            if (this._deleted === true) {
-                var primary_key = this.trellis.primary_key;
-                item[primary_key] = this[primary_key];
-                item._deleted = true;
-            }
-            else {
-                for (p in this.trellis.properties) {
-                    if (p == 'type')
-                        continue;
-
-                    property = this.trellis.properties[p];
-                    name = property.name;
-                    type = property.type;
-                    var value = this[name];
-
-                    if (value !== undefined && value !== null) {
-                        if (type == 'list') {
-                            item[name] = value.map(function (x) {
-                                return Seed.prepare_for_planting(x, property.target_trellis, bag)
-                            });
-
-                            if (value.deleted && value.deleted.length > 0) {
-                                item[name + '_deleted'] = value.deleted.map(function (x) {
-                                    return x.id;
-                                });
-                            }
-                        }
-                        else if (type == 'reference') {
-                            item[name] = Seed.prepare_for_planting(value, property.target_trellis, bag);
-                        }
-                        else {
-                            item[name] = value;
-                        }
-                    }
-                }
-            }
-            item.trellis = this.trellis.name;
-            --bag.depth;
-            return item;
         }
     });
 
-    Seed.prepare_for_planting = function (item, trellis, bag) {
-        //    if (!bag)
-        //      throw new Error('A valid bag object is required for planting.');
-        //
+    Seed.prepare_for_planting = function (seed, trellis, bag) {
+        bag = bag || {
+            depth: 0,
+            seeds: {}
+        }
         //    if (bag.depth > trellis.vineyard.max_plant_depth)
         //      throw new Error('Infinite loop detected during planting.');
-        //
+
         ++bag.depth;
-        var key = 'id';
-        if (trellis)
-            key = trellis.primary_key;
+        var result, key = 'id';
 
-        if (typeof item == 'object') {
-            if (item[key] !== undefined && item[key] !== null) {
-                --bag.depth;
-                return item[key];
+        if (typeof seed != 'object')
+            throw new Error('Seed.prepare_for_planting() requires an object');
+
+        if (seed._is_proxy)
+            return undefined;
+
+        trellis = trellis || seed.trellis;
+        if (!trellis)
+            throw new Error('Missing trellis.');
+
+        var property, name, type, item = {}, p;
+        var primary_key = trellis.primary_key;
+
+        if (typeof seed.guid === 'string') {
+            if (bag.seeds[seed.guid]) {
+                return seed[primary_key];
             }
-
-            if (typeof item._prepare_for_planting == 'function' && !item._is_proxy) {
-                --bag.depth;
-                return item._prepare_for_planting(bag);
-            }
-
+            bag.seeds[seed.guid] = seed;
         }
+
+        if (seed._deleted === true) {
+            item[primary_key] = seed[primary_key];
+            item._deleted = true;
+        }
+        else {
+            for (p in trellis.properties) {
+                if (p == 'type')
+                    continue;
+
+                property = trellis.properties[p];
+
+                if (p != primary_key && (property.private || property.readonly))
+                    continue;
+
+                name = property.name;
+                type = property.type;
+                var value = seed[name];
+
+                if (value !== undefined) {
+                    if (type == 'list') {
+                        item[name] = value.map(function (x) {
+                            return Seed.prepare_for_planting(x, property.target_trellis, bag)
+                        });
+
+                        if (value._deleted && value._deleted.length > 0) {
+                            item[name + '_deleted'] = value._deleted.map(function (x) {
+                                return x.id;
+                            });
+                        }
+                    }
+                    else if (type == 'reference') {
+                        value = Seed.prepare_for_planting(value, property.target_trellis, bag);
+                        if (value !== undefined)
+                            item[name] = value;
+                    }
+                    else {
+                        item[name] = value;
+                    }
+                }
+            }
+        }
+        item.trellis = trellis.name;
 
         --bag.depth;
         return item;
