@@ -251,41 +251,49 @@ var Vineyard = (function () {
                 success = silent;
                 silent = false;
             }
-
-            if (this._is_proxy)
-                throw new Error("Cannot plant proxy seeds.");
-
-            var self = this, item = Seed.prepare_for_planting(this, this.trellis);
-            var data = {
-                objects: [ item ]
-            };
-
-            var primary_key = this.trellis.primary_key;
-
-            var url = this.trellis.vineyard.garden.irrigation.get_plant_url() + Bloom.render_query({
-                'XDEBUG_SESSION_START': 'netbeans-xdebug'
-            });
-            Bloom.post_json(url, data, function (response) {
-                if (response.success && Bloom.output) {
-                    if (self[primary_key] === undefined)
-                        self[primary_key] = response[primary_key];
-
-                    if (typeof success === 'function') {
-                        success(self);
-                    }
-                    if (silent)
-                        return;
-
-                    Bloom.output({
-                        message: 'Saved.'
-                    });
-
-                    self.trellis.vineyard.invoke('seed-updated', self);
-
-                }
-            });
+            Seed.plant(this, this.trellis, silent, success);
         }
     });
+    
+    Seed.plant = function (seed, trellis, silent, success) {
+        if (typeof silent === 'function') {
+            success = silent;
+            silent = false;
+        }
+
+        if (seed._is_proxy)
+            throw new Error("Cannot plant proxy seeds.");
+
+        var item = Seed.prepare_for_planting(seed, trellis);
+        var data = {
+            objects: [ item ]
+        };
+
+        var primary_key = trellis.primary_key;
+
+        var url = trellis.vineyard.garden.irrigation.get_plant_url() + Bloom.render_query({
+            'XDEBUG_SESSION_START': 'netbeans-xdebug'
+        });
+        Bloom.post_json(url, data, function (response) {
+            if (response.success && Bloom.output) {
+                if (seed[primary_key] === undefined)
+                    seed[primary_key] = response[primary_key];
+
+                if (typeof success === 'function') {
+                    success(seed);
+                }
+                if (silent)
+                    return;
+
+                Bloom.output({
+                    message: 'Saved.'
+                });
+
+                trellis.vineyard.invoke('seed-updated', seed);
+
+            }
+        });
+    }
 
     Seed.prepare_for_planting = function (seed, trellis, bag) {
         bag = bag || {
