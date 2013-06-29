@@ -289,7 +289,7 @@ var Garden = Meta_Object.subclass('Garden', {
         var query = Bloom.join(this.app_path, 'vineyard', trellis, id, Bloom.render_query(args));
         Bloom.get(query, function (response) {
             if (!response.objects.length) {
-                console.log('No objects found with query: ' + query);
+//                console.log('No objects found with query: ' + query);
                 self.invoke('not-found', trellis, args);
                 done(null);
                 return;

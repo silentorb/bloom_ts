@@ -26,6 +26,35 @@ var Vineyard = (function () {
                 this.trellises[x].initialize_properties();
             }
         },
+        create_and_attach_vine: function (seed, property, list) {
+            var control = this.create_vine(seed, property);
+            var skin = Vine_Skin.create(control);
+            list.connect(skin, 'child', 'parent');
+            return skin;
+        },
+        create_vine: function (seed, property) {
+            var control_type = this.get_vine_type(property);
+            var control = control_type.create({
+                owner: seed,
+                property: property,
+                seed: Seed.value(seed, property.name)
+            });
+
+            return control;
+        },
+        get_vine_type: function (property) {
+            var type = property.type;
+            if (property.vine && this.vines[property.vine])
+                return this.vines[property.vine];
+
+            if (property.trellis && this.vines[property.trellis])
+                return this.vines[property.trellis];
+
+            if (this.vines[type])
+                return this.vines[type];
+            else
+                return this.default_vine;
+        },
         extend_trellis: function (target, source) {
             var y;
             if (!source.properties || !target.properties)
@@ -254,7 +283,7 @@ var Vineyard = (function () {
             Seed.plant(this, this.trellis, silent, success);
         }
     });
-    
+
     Seed.plant = function (seed, trellis, silent, success) {
         if (typeof silent === 'function') {
             success = silent;
@@ -411,6 +440,19 @@ var Vineyard = (function () {
             });
         }
     });
+
+    Seed.value = function(seed, name, value) {
+        if (typeof seed.value === 'function') {
+            return seed.value(name, value);
+        }
+
+        if (value === undefined) {
+            return seed[name];
+        }
+        else {
+            return seed[name] = value;
+        }
+    }
 
     /*
      *  Vine = Form Field
@@ -716,19 +758,9 @@ var Vineyard = (function () {
                 this.generate_vines(this.seed, this.trellis);
             }
         },
-        create_vine: function (seed, property) {
-            var control_type = this.get_vine_type(property);
-            var control = control_type.create({
-                owner: seed,
-                property: property,
-                seed: seed.value(property.name)
-            });
-
-            return control;
-        },
         generate_vines: function (seed, type_info) {
             this.list.empty();
-            var properties = {}, p;
+            var properties = {}, p, vineyard = this.trellis.vineyard;
             for (p in type_info.properties) {
                 properties[p] = this.get_view_property(type_info.properties[p]);
             }
@@ -740,9 +772,7 @@ var Vineyard = (function () {
 
                 var property = properties[i];
                 if (!property.readonly && property.visible !== false) {
-                    var control = this.create_vine(seed, property);
-                    var skin = Vine_Skin.create(control);
-                    this.list.connect(skin, 'child', 'parent');
+                    vineyard.create_and_attach_vine(seed, property, this.list);
                 }
             }
         },
@@ -757,20 +787,6 @@ var Vineyard = (function () {
             }
 
             return original_property;
-        },
-        get_vine_type: function (property) {
-            var type = property.type;
-            var vineyard = this.trellis.vineyard;
-            if (property.vine && vineyard.vines[property.vine])
-                return vineyard.vines[property.vine];
-
-            if (property.trellis && vineyard.vines[property.trellis])
-                return vineyard.vines[property.trellis];
-
-            if (vineyard.vines[type])
-                return vineyard.vines[type];
-            else
-                return vineyard.default_vine;
         },
         seed_to_element: function (seed) {
             if (!this.element)

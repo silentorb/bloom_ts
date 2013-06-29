@@ -1343,7 +1343,7 @@ Bloom.get = function(url, action, error, sync) {
     }
   };
 
-  console.log('async', !sync);
+//  console.log('async', !sync);
 
   if (window.TESTING) {
     error = function(x, status, message) {
