@@ -29,6 +29,7 @@ var Vineyard = (function () {
         create_and_attach_vine: function (seed, property, list) {
             var control = this.create_vine(seed, property);
             var skin = Vine_Skin.create(control);
+            skin.element.addClass('field-' + property.name);
             list.connect(skin, 'child', 'parent');
             return skin;
         },
@@ -385,7 +386,7 @@ var Vineyard = (function () {
                             });
                         }
                     }
-                    else if (type == 'reference') {
+                    else if (type == 'reference' && typeof value === 'object') {
                         value = Seed.prepare_for_planting(value, property.target_trellis, bag);
                         if (value !== undefined)
                             item[name] = value;
@@ -441,7 +442,7 @@ var Vineyard = (function () {
         }
     });
 
-    Seed.value = function(seed, name, value) {
+    Seed.value = function (seed, name, value) {
         if (typeof seed.value === 'function') {
             return seed.value(name, value);
         }
