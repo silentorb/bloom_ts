@@ -29,7 +29,7 @@ var Vineyard = (function () {
         create_and_attach_vine: function (seed, property, list) {
             var control = this.create_vine(seed, property);
             var skin = Vine_Skin.create(control);
-            skin.element.addClass('field-' + property.name);
+            skin.element.addClass('field-' + property.name.replace(/ /g, '-'));
             list.connect(skin, 'child', 'parent');
             return skin;
         },
