@@ -362,8 +362,8 @@ var Vineyard = (function () {
     }
     else {
       for (p in trellis.properties) {
-        if (p == 'type')
-          continue;
+//        if (p == 'type')
+//          continue;
 
         property = trellis.properties[p];
 
