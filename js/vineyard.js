@@ -582,8 +582,9 @@ var Vineyard = (function () {
           value = date.getTime() / 1000;
         }
 
+        Vine.update_seed(self, value);
         // skipping update_seed for now because it's throwing a timestamp into the field.
-        self.owner[self.name] = value;
+        //self.owner[self.name] = value;
       });
 
       this.input = input;
