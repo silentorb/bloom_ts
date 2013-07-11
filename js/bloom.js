@@ -4,7 +4,7 @@
  * Christopher W. Johnson
  * Copyright 2012 Silent Orb
  */
-var Bloom = (function() {
+var Bloom = (function () {
   'use strict';
   var Bloom = {
     version: '1.3.0'
@@ -15,7 +15,7 @@ var Bloom = (function() {
 
   var Mulch = {
     dirt: {},
-    add: function(type, names, fertilizer, url) {
+    add: function (type, names, fertilizer, url) {
       // This may change down the road, but currently load_resources() can be called
       // multiple times.  Because of that, Mulch prevents overwriting of dirt types
       // or there would be redundant calls to the server.  If two scripts are
@@ -33,7 +33,7 @@ var Bloom = (function() {
     },
     // Originally this simply took a function, but that has been deprecated
     // in favor of also passing a list of blocks as 'dirt'.
-    load_resources: function(pile, onfinished) {
+    load_resources: function (pile, onfinished) {
       if (typeof pile == 'function') {
         onfinished = pile;
       }
@@ -65,13 +65,13 @@ var Bloom = (function() {
         }
       }
     },
-    fertilize_handful: function(type, dirt) {
-      jQuery.get(dirt.url, function(response) {
+    fertilize_handful: function (type, dirt) {
+      jQuery.get(dirt.url, function (response) {
         dirt.fertilizer(response, dirt.names[0]);
-        Mulch.till(type,  dirt.names[0]);
+        Mulch.till(type, dirt.names[0]);
       }, 'text');
     },
-    till: function(type, name) {
+    till: function (type, name) {
       var dirt = Mulch.dirt[type];
       if (dirt && dirt.names.indexOf(name) > -1) {
         dirt.tilled = true;
@@ -86,7 +86,7 @@ var Bloom = (function() {
         }
       }
     },
-    is_empty: function() {
+    is_empty: function () {
       for (var x in Mulch.dirt) {
         if (Mulch.dirt[x].names.length > 0)
           return false;
@@ -106,6 +106,7 @@ var Bloom = (function() {
     else
       this.html = '';
   }
+
   Bloom.Block = Block;
 
   Block.library = {}
@@ -113,7 +114,7 @@ var Bloom = (function() {
   Block.source_path = "";
   Block.use_alert = false;
 
-  Block.load = function(name, onload) {
+  Block.load = function (name, onload) {
     var block = Block.library[name];
 
     if (!block) {
@@ -125,7 +126,7 @@ var Bloom = (function() {
 
       jQuery.ajax({
         url: url,
-        success: function(seed) {
+        success: function (seed) {
           block.html = seed;
           for (var x = 0; x < block.queue.length; x++) {
             block.queue[x](block);
@@ -133,7 +134,7 @@ var Bloom = (function() {
           delete block.queue;
           Mulch.till('block', name);
         },
-        error: function(jqXHR, text, error) {
+        error: function (jqXHR, text, error) {
           var message = 'Could not load ' + name + Block.default_extension + '.';
           delete Block.library[name];
           if (Block.use_alert) {
@@ -159,17 +160,17 @@ var Bloom = (function() {
     }
   }
 
-  Block.load_library = function(name, onload) {
+  Block.load_library = function (name, onload) {
     var url = name + Block.default_extension
     if (Block.source_path.length > 0)
       url = Block.source_path + "/" + url;
     jQuery.ajax({
       url: url,
-      success: function(seed) {
+      success: function (seed) {
         Block.load_library_from_string(seed);
         Mulch.till('blocks', name);
       },
-      error: function(jqXHR, text, error) {
+      error: function (jqXHR, text, error) {
         var message = 'Could not load ' + name + Block.default_extension + '.';
         if (Block.use_alert) {
           alert(message);
@@ -184,9 +185,9 @@ var Bloom = (function() {
     }
   }
 
-  Block.load_library_from_string = function(text) {
+  Block.load_library_from_string = function (text) {
     var data = $(text);
-    data.children().each(function() {
+    data.children().each(function () {
       var child = $(this);
       var id = child.attr('name');
       if (id)
@@ -203,7 +204,7 @@ var Bloom = (function() {
     });
   }
 
-  Block.render = function(name, seed) {
+  Block.render = function (name, seed) {
     return Block.library[name].render(seed);
   }
 
@@ -211,10 +212,10 @@ var Bloom = (function() {
     constructor: Block,
     name: '',
     html: '',
-    render: function(control) {
+    render: function (control) {
       var output = this.html;
 
-      output = output.replace(/@{([\W\w]*?)}(?=\s*(?:<|"))/gm, function(all, code) {
+      output = output.replace(/@{([\W\w]*?)}(?=\s*(?:<|"))/gm, function (all, code) {
         var result = eval(code);
         if (typeof result === "undefined" || result == null)
           return '';
@@ -228,28 +229,36 @@ var Bloom = (function() {
   }
 
   var Flower = Meta_Object.subclass('Flower', {
-    initialize: function() {
+    override_parameters: false,
+    initialize: function () {
+      // The default method Bloom has used to pass arguments
+      // to Flowers has a lot of benefits and works well much
+      // of the time, but I keep running into how inflexible it
+      // is, so have added an override_parameters property
+      // which allows the derived Flower class to handle its
+      // parameters on its own.
+      if (!this.override_parameters) {
+        for (var x = 0; x < arguments.length; ++x) {
+          var argument = arguments[x];
+          if (argument != null) {
+            if (typeof argument == 'string') {
+              this.element = jQuery(argument);
+            }
+            else if (typeof argument == 'function') {
+              this.__create_finished = argument;
+            }
+            else if (argument.jquery) {
+              this.element = argument;
+            }
+            else if (typeof argument == 'object') {
+              if (typeof this.data_process == 'function' || typeof this.type.methods.data_process == 'function')
+                this.seed = this.data_process(argument);
+              else
+                this.seed = argument;
 
-      for (var x = 0; x < arguments.length; ++x) {
-        var argument = arguments[x];
-        if (argument != null) {
-          if (typeof argument == 'string') {
-            this.element = jQuery(argument);
-          }
-          else if (typeof argument == 'function') {
-            this.__create_finished = argument;
-          }
-          else if (argument.jquery) {
-            this.element = argument;
-          }
-          else if (typeof argument == 'object') {
-            if (typeof this.data_process == 'function' || typeof this.type.methods.data_process == 'function')
-              this.seed = this.data_process(argument);
-            else
-              this.seed = argument;
-
-            if (this.seed.is_meta_object) {
-              this.connect(this.seed, 'seed', 'flower');
+              if (this.seed.is_meta_object) {
+                this.connect(this.seed, 'seed', 'flower');
+              }
             }
           }
         }
@@ -264,14 +273,14 @@ var Bloom = (function() {
         this.source_to_element();
       }
 
-      this.listen(this, 'disconnect-all', function() {
+      this.listen(this, 'disconnect-all', function () {
         if (this.element) {
           this.element.remove();
           this.element = null;
         }
       });
     },
-    render: function(onload) {
+    render: function (onload) {
       var self = this;
 
       //Block.load(this.block, function(block) {
@@ -288,27 +297,27 @@ var Bloom = (function() {
         onload(self);
       //});
     },
-    append: function(flower) {
+    append: function (flower) {
       this.element.append(flower.element);
     },
-    listen_to_element: function(event, method) {
+    listen_to_element: function (event, method) {
       var self = this;
 
-      this.element.bind(event, function() {
+      this.element.bind(event, function () {
         method.apply(self, arguments);
       })
     },
-    get_data: function() {
+    get_data: function () {
       var args = Array.prototype.slice.call(arguments);
       var method = args.pop();
-      jQuery.get(args, function() {
+      jQuery.get(args, function () {
         var args = Array.prototype.slice.call(arguments);
         args.push('json');
         method.apply(this, args);
       });
     },
-    plant: function(url) {
-      jQuery.post(url, this.seed, function(response) {
+    plant: function (url) {
+      jQuery.post(url, this.seed, function (response) {
         if (!response.result) {
           Bloom.output('There was a problem communicating with the server.');
           return;
@@ -320,16 +329,16 @@ var Bloom = (function() {
           this.invoke('plant.error', response);
       });
     },
-    click: function(action, meta_object) {
+    click: function (action, meta_object) {
       if (!meta_object) {
         meta_object = this;
       }
-      this.element.click(function(event) {
+      this.element.click(function (event) {
         event.preventDefault();
         action.call(meta_object, event);
       });
     },
-    drag: function(data) {
+    drag: function (data) {
       var scope, element = this.element;
 
       if (data.within_bounds)
@@ -337,11 +346,11 @@ var Bloom = (function() {
       else
         scope = $(document);
 
-      var mousemove = function(event) {
+      var mousemove = function (event) {
         data.moving.call(data.owner, event);
         event.preventDefault();
       };
-      var mouseup = function(event) {
+      var mouseup = function (event) {
         event.bubbles = false;
         $(document).unbind('mouseup', mouseup);
         scope.unbind('mousemove', mousemove);
@@ -349,7 +358,7 @@ var Bloom = (function() {
           data.finished.call(data.owner, event);
         }
       };
-      element.mousedown(function(event) {
+      element.mousedown(function (event) {
         if (typeof data.can_move == 'function' && !data.can_move(event)) {
           return;
         }
@@ -360,14 +369,14 @@ var Bloom = (function() {
         event.preventDefault();
       });
     },
-    source_to_element: function() {
+    source_to_element: function () {
       if (!this.element)
         return;
 
       var value;
       var self = this;
 
-      this.element.find('*[bind]').each(function() {
+      this.element.find('*[bind]').each(function () {
         var element = $(this);
         var bind = element.attr('bind');
         if (self.hasOwnProperty(bind)) {
@@ -401,7 +410,7 @@ var Bloom = (function() {
         }
       }
     },
-    element_to_source: function() {
+    element_to_source: function () {
       for (var name in this.seed) {
         var element = this.element.find('#' + name + ', .' + name + ', [bind=' + name + ']').first();
         if (element.length == 1) {
@@ -411,30 +420,30 @@ var Bloom = (function() {
         }
       }
     },
-    empty: function() {
+    empty: function () {
       this.disconnect_all('child');
       this.element.empty();
     },
-    graft_old: function(selector, other) {
+    graft_old: function (selector, other) {
       var element = this.element.find(selector);
-      this.listen(other, 'change', function(value) {
+      this.listen(other, 'change', function (value) {
         Flower.set_value(element, value);
       });
 
       Flower.set_value(element, other.value);
     },
-    graft: function(other, property, selector) {
+    graft: function (other, property, selector) {
       if (selector === undefined) {
         selector = '.' + property.replace('_', '-');
       }
       var element = this.element.find(selector);
-      this.listen(other, 'change.' + property, function(value) {
+      this.listen(other, 'change.' + property, function (value) {
         Flower.set_value(element, value);
       });
 
       Flower.set_value(element, other[property]);
     },
-    update: function(test) {
+    update: function (test) {
       var self = this;
       if (this.query == undefined) {
         return;
@@ -447,7 +456,7 @@ var Bloom = (function() {
 
       var wait, finished = false;
       if (Bloom.Wait_Animation) {
-        setTimeout(function() {
+        setTimeout(function () {
           if (!finished) {
             var parent = self.element.parent();
             if (parent) {
@@ -457,7 +466,7 @@ var Bloom = (function() {
           }
         }, 100);
       }
-      Bloom.get(query, function(response) {
+      Bloom.get(query, function (response) {
         finished = true;
         if (wait) {
           wait.element.remove();
@@ -483,7 +492,7 @@ var Bloom = (function() {
     seed_name: 'seed'
   });
 
-  Flower.set_value = function(element, value) {
+  Flower.set_value = function (element, value) {
     if (Flower.is_input(element)) {
       if (element.attr('type') == 'checkbox') {
         if (value === true || value === 'true')
@@ -500,7 +509,7 @@ var Bloom = (function() {
     }
   };
 
-  Flower.is_input = function(element) {
+  Flower.is_input = function (element) {
     if (element.length == 0)
       return false;
     var name = element[0].nodeName.toLowerCase();
@@ -517,7 +526,7 @@ var Bloom = (function() {
     //    item_type: null,
     pager: null,
     empty_on_update: true,
-    initialize: function() {
+    initialize: function () {
       this.optimize_getter('children', 'child');
       this.listen(this, 'update', this.on_update);
       this.listen(this, 'connect.child', this.child_connected);
@@ -533,7 +542,7 @@ var Bloom = (function() {
           this.populate(this.seed);
       }
     },
-    add_seed_child: function(seed_item) {
+    add_seed_child: function (seed_item) {
       var flower;
       if (typeof this.item_type === 'function') {
         flower = this.item_type(seed_item).create(seed_item);
@@ -544,7 +553,7 @@ var Bloom = (function() {
       this.connect(flower, 'child', 'parent');
       return flower;
     },
-    child_connected: function(flower) {
+    child_connected: function (flower) {
       var line;
       if (flower.element[0].nodeName.toLowerCase() == 'li' || this.element.prop('tagName') != 'UL') {
         line = flower.element;
@@ -558,11 +567,11 @@ var Bloom = (function() {
         List.make_item_selectable(this, flower, this.selection);
       }
     },
-    process_connect: function(other, type, other_type) {
+    process_connect: function (other, type, other_type) {
       if (type == 'child' && this.contains_flower(other))
         return false;
     },
-    on_update: function(seed) {
+    on_update: function (seed) {
       var self = this;
       // Catch it early
       if (!this.element) {
@@ -591,10 +600,10 @@ var Bloom = (function() {
       //        }
       //      }
     },
-    contains_flower: function(flower) {
+    contains_flower: function (flower) {
       return this.element.has(flower.element[0]).length > 0;
     },
-    make_selectable: function(selection) {
+    make_selectable: function (selection) {
       if (selection == undefined)
         this.selection = Meta_Object.create();
       else
@@ -604,12 +613,12 @@ var Bloom = (function() {
         List.make_item_selectable(this, this.children[x], selection);
       }
     },
-    load: function(seed) {
+    load: function (seed) {
       seed = seed || this.seed
       this.populate(seed);
       this.invoke('updated', seed);
     },
-    populate: function(seed) {
+    populate: function (seed) {
       if (seed.is_meta_object) {
         var children = seed.get_connections('child');
         for (var x = 0; x < children.length; ++x) {
@@ -627,14 +636,14 @@ var Bloom = (function() {
         }
       }
     },
-    remove: function(item) {
+    remove: function (item) {
       if (item.element && item.element.parent() == this ||
-              (item.element.parent() && item.element.parent().parent() == this)) {
+        (item.element.parent() && item.element.parent().parent() == this)) {
         item.element.detach();
       }
       this.disconnect(item);
     },
-    remove_element: function(item) {
+    remove_element: function (item) {
       if (item.element) {
         if (item.element.parent()[0] == this.element[0]) {
           item.element.detach();
@@ -646,7 +655,7 @@ var Bloom = (function() {
         }
       }
     },
-    watch_seed: function(child_name, seed) {
+    watch_seed: function (child_name, seed) {
       if (seed !== undefined) {
         this.seed = seed;
       }
@@ -658,11 +667,11 @@ var Bloom = (function() {
         child_name = 'child';
       }
 
-      this.listen(this.seed, 'connect.' + child_name, function(item) {
+      this.listen(this.seed, 'connect.' + child_name, function (item) {
         this.add_seed_child(item);
       });
 
-      this.listen(this.seed, 'disconnect.' + child_name, function(item) {
+      this.listen(this.seed, 'disconnect.' + child_name, function (item) {
         var children = this.get_connections('child');
 
         for (var x = 0; x < children.length; x++) {
@@ -680,8 +689,8 @@ var Bloom = (function() {
     }
   });
 
-  List.make_item_selectable = function(list, item, selection) {
-    item.click(function() {
+  List.make_item_selectable = function (list, item, selection) {
+    item.click(function () {
       if (MetaHub.get_connection(item.seed, selection))
         return;
 
@@ -692,31 +701,31 @@ var Bloom = (function() {
     if (MetaHub.get_connection(item.seed, selection))
       item.element.addClass('selected');
 
-    list.listen(item.seed, 'connect.selection', function() {
+    list.listen(item.seed, 'connect.selection', function () {
       item.element.addClass('selected');
     });
 
-    list.listen(item.seed, 'disconnect.selection', function() {
+    list.listen(item.seed, 'disconnect.selection', function () {
       item.element.removeClass('selected');
     });
   };
 
   var Combo_Box = Flower.subclass('Combo_Box', {
     name_property: 'name',
-    initialize: function() {
+    initialize: function () {
       if (!this.element) {
         this.element = $('<select/>');
       }
 
       this.populate();
     },
-    get_index: function() {
+    get_index: function () {
       return this.element.find('option:selected').val();
     },
-    get_selection: function() {
+    get_selection: function () {
       return this.seed[this.get_index()];
     },
-    populate: function(value_property, value) {
+    populate: function (value_property, value) {
       var index, item, self = this;
       for (var i = 0; i < this.seed.length; i++) {
         item = this.seed[i];
@@ -732,7 +741,7 @@ var Bloom = (function() {
         this.element.children().first().attr('selected', 'selected');
       }
 
-      this.element.change(function() {
+      this.element.change(function () {
         var selection = self.get_selection();
         self.invoke('change', selection);
       });
@@ -740,16 +749,16 @@ var Bloom = (function() {
       if (value)
         this.set_value(value);
     },
-    set_value: function(value) {
+    set_value: function (value) {
       this.element.val(value);
     }
   });
 
   var Tree = List.subclass('Tree', {
-    initialize: function() {
+    initialize: function () {
 
     },
-    add_seed_child: function(seed) {
+    add_seed_child: function (seed) {
       var flower = this.item_type.create(seed);
       this.connect(flower, 'child', 'parent');
       var children = seed.get_connections('child');
@@ -786,15 +795,15 @@ var Bloom = (function() {
     title: 'Dialog',
     modal: true,
     resizable: true,
-    initialize: function() {
+    initialize: function () {
       if (this.element) {
         this.initialize_form();
       }
     },
-    initialize_form: function() {
+    initialize_form: function () {
       var self = this;
 
-      this.element.find('input[type=button], button').click(function(e) {
+      this.element.find('input[type=button], button').click(function (e) {
         e.preventDefault();
         var button = $(this);
         var action;
@@ -823,12 +832,12 @@ var Bloom = (function() {
         self.invoke('button');
       });
 
-      this.listen(this, 'submit', function() {
+      this.listen(this, 'submit', function () {
         self.element_to_source();
         self.close();
       });
 
-      this.listen(this, 'update', function(seed) {
+      this.listen(this, 'update', function (seed) {
         if (!self.active) {
           self.show();
           self.active = true;
@@ -841,7 +850,7 @@ var Bloom = (function() {
         height: this.height,
         modal: true,
         resizable: this.resizable,
-        close: function() {
+        close: function () {
           self.element.remove();
           // This is going to cause problems down the line and should eventually be done differently.
           $(window).unbind();
@@ -849,14 +858,14 @@ var Bloom = (function() {
         }
       };
     },
-    bind_output: function(element, action) {
+    bind_output: function (element, action) {
       var old_output = Bloom.output;
       Bloom.output = action;
-      this.listen(this, 'close', function() {
+      this.listen(this, 'close', function () {
         Bloom.output = old_output;
       });
     },
-    show: function() {
+    show: function () {
       if (!this.modal)
         return;
 
@@ -865,7 +874,7 @@ var Bloom = (function() {
 
       this.dialog = this.element.dialog(this.options);
 
-      $(window).keydown(function(event) {
+      $(window).keydown(function (event) {
         if (event.keyCode == 13) {
           event.preventDefault();
           return false;
@@ -874,11 +883,11 @@ var Bloom = (function() {
 
       this.invoke('show');
     },
-    close: function() {
+    close: function () {
       if (this.modal)
         this.dialog.dialog('close');
     },
-    query: function() {
+    query: function () {
     }
 
   });
@@ -890,7 +899,7 @@ var Bloom = (function() {
     width: null,
     height: null,
     title: 'Dialog',
-    initialize: function() {
+    initialize: function () {
       if (!this.form) {
         if (this.form_type) {
           this.form = this.form_type.create(this.seed);
@@ -900,7 +909,7 @@ var Bloom = (function() {
         this.initialize_form();
       }
     },
-    initialize_form: function(form_type) {
+    initialize_form: function (form_type) {
       var self = this;
 
       if (!this.form) {
@@ -912,7 +921,7 @@ var Bloom = (function() {
         this.form = this.form_type.create(this.seed);
       }
       this.element.find('.dialog-content').append(this.form.element);
-      this.element.find('input[type=button], button').click(function(e) {
+      this.element.find('input[type=button], button').click(function (e) {
         e.preventDefault();
         var button = $(this);
         var action;
@@ -947,18 +956,18 @@ var Bloom = (function() {
         self.form.invoke('button');
       });
 
-      this.listen(self.form, 'finish', function() {
+      this.listen(self.form, 'finish', function () {
         self.close();
       });
 
-      this.listen(this, 'update', function(seed) {
+      this.listen(this, 'update', function (seed) {
         if (!self.active) {
           self.show();
           self.active = true;
         }
       });
 
-      this.element.find('.ui-dialog-titlebar-close').click(function(e) {
+      this.element.find('.ui-dialog-titlebar-close').click(function (e) {
         e.preventDefault();
         self.close();
       });
@@ -977,7 +986,7 @@ var Bloom = (function() {
        }
        };*/
     },
-    close: function() {
+    close: function () {
       this.invoke('close');
       this.form.invoke('close');
       this.element.remove();
@@ -986,7 +995,7 @@ var Bloom = (function() {
         delete this.backMulch;
       }
     },
-    show: function() {
+    show: function () {
       if (Block.library['disabled-backMulch']) {
         this.backMulch = $(Block.library['disabled-backMulch'].html);
         $('body').append(this.backMulch);
@@ -997,7 +1006,7 @@ var Bloom = (function() {
       this.element.find('.ui-dialog-title').text(this.title);
       this.update_horizontal();
 
-      $(window).keydown(function(event) {
+      $(window).keydown(function (event) {
         if (event.keyCode == 13) {
           event.preventDefault();
           return false;
@@ -1006,7 +1015,7 @@ var Bloom = (function() {
 
       this.invoke('show');
     },
-    update_horizontal: function() {
+    update_horizontal: function () {
       var view = $(window);
       if (this.width) {
         this.element.width(this.width);
@@ -1021,7 +1030,7 @@ var Bloom = (function() {
     }
   });
 
-  Dialog.form = function(type, seed) {
+  Dialog.form = function (type, seed) {
     var dialog = Dialog.create(seed);
     dialog.initialize_form(type);
     return dialog;
@@ -1034,14 +1043,14 @@ var Bloom = (function() {
     page_size: 5,
     text_filter: '',
     list: null,
-    initialize: function(list) {
+    initialize: function (list) {
       var self = this;
       this.list = list;
       this.connect(list, 'list', 'pager');
       this.listen(this, 'update', this.on_update);
 
       this.prev = this.element.find('.prev');
-      this.prev.click(function() {
+      this.prev.click(function () {
         if (!self.at_beginning()) {
           --self.page;
           list.update();
@@ -1049,7 +1058,7 @@ var Bloom = (function() {
       });
 
       this.next = this.element.find('.next');
-      this.next.click(function() {
+      this.next.click(function () {
         if (!self.at_end()) {
           ++self.page;
           list.update();
@@ -1057,12 +1066,12 @@ var Bloom = (function() {
       });
 
       this.filter = this.element.find('.filter');
-      this.filter.change(function() {
+      this.filter.change(function () {
         self.text_filter = $(this).val();
         list.update();
       });
 
-      Bloom.watch_input(this.filter, function(e) {
+      Bloom.watch_input(this.filter, function (e) {
         //   if (e.keyCode == 13) {
         self.text_filter = $(this).val();
         self.page = 0;
@@ -1070,7 +1079,7 @@ var Bloom = (function() {
         //  }
       });
 
-      this.listen(list, 'update', function(seed, response) {
+      this.listen(list, 'update', function (seed, response) {
         this.rows = response.total;
         if (this.at_beginning())
           this.prev.fadeTo(100, 0.3);
@@ -1088,20 +1097,20 @@ var Bloom = (function() {
       this.prev.fadeTo(0, 0);
       this.next.fadeTo(0, 0);
     },
-    query: function() {
+    query: function () {
       return "&offset=" + (this.page * this.page_size) + "&limit=" + this.page_size;
     },
-    at_beginning: function() {
+    at_beginning: function () {
       return this.page <= 0;
     },
-    at_end: function() {
+    at_end: function () {
       return this.page >= Math.round(this.rows / this.page_size)
     }
   });
 
   var More = Meta_Object.subclass('More', {
     limit: 5,
-    initialize: function(list, link_element, limit) {
+    initialize: function (list, link_element, limit) {
       this.limit = limit || this.limit;
       this.connect(list, 'list', 'pager');
       list.pager = this;
@@ -1109,18 +1118,18 @@ var Bloom = (function() {
       // If you don't provide a link_element, this simply acts as a limiter
       if (link_element) {
         this.link = link_element;
-        link_element.click(function(e) {
+        link_element.click(function (e) {
           e.preventDefault();
           list.update();
         });
 
-        this.listen(list, 'update', function(seed, response) {
+        this.listen(list, 'update', function (seed, response) {
           if (list.seed.length >= response.total)
             link_element.remove();
         });
       }
     },
-    query: function(seed) {
+    query: function (seed) {
       var result = {
         limit: this.limit
       }
@@ -1134,8 +1143,8 @@ var Bloom = (function() {
   var Confirmation_Dialog = Dialog_Old.subclass('Confirmation_Dialog', {
     block: 'confirmation',
     height: 200,
-    initialize: function() {
-      this.listen(this, 'button', function() {
+    initialize: function () {
+      this.listen(this, 'button', function () {
         this.close();
       });
     }
@@ -1144,21 +1153,21 @@ var Bloom = (function() {
   var Alert_Dialog = Dialog_Old.subclass('Alert_Dialog', {
     block: 'alert',
     height: 200,
-    initialize: function() {
-      this.listen(this, 'button', function() {
+    initialize: function () {
+      this.listen(this, 'button', function () {
         this.close();
       });
     }
   });
 
   var Popup = Flower.subclass('Popup', {
-    initialize: function() {
+    initialize: function () {
       var self = this;
-      this.close = function() {
+      this.close = function () {
         $(window).unbind('click', self.close);
         self.element.parent().animate({
           'height': self.original_parent_height
-        }, 300, function() {
+        }, 300, function () {
           self.element.parent().css('height', 'auto');
           self.disconnect_all();
           Popup.current = null;
@@ -1166,7 +1175,7 @@ var Bloom = (function() {
 
       }
     },
-    show: function(parent) {
+    show: function (parent) {
       var self = this;
       if (Popup.current) {
         Popup.current.close();
@@ -1176,7 +1185,7 @@ var Bloom = (function() {
       }
 
       // Set a delay so that this hook isn't active until after it has finished propagating.
-      setTimeout(function() {
+      setTimeout(function () {
         $(window).click(self.close);
       }, 1);
 
@@ -1201,16 +1210,16 @@ var Bloom = (function() {
   var Tab_Panel = Flower.subclass('Tab_Panel', {
     block: 'tab-panel',
     children: [],
-    initialize: function() {
+    initialize: function () {
       this.tab_panel = List.create(this.element.find('.tabs'));
       this.container = this.element.find('.container');
 
-      this.listen(this, 'connect.child', function(item) {
+      this.listen(this, 'connect.child', function (item) {
         var self = this;
         this.children.push(item);
         this.container.append(item.element);
         var tab = Flower.create('<li>' + item.title + '</li>');
-        tab.click(function() {
+        tab.click(function () {
           self.set_tab(item);
         });
 
@@ -1225,7 +1234,7 @@ var Bloom = (function() {
         }
       });
 
-      this.listen(this, 'disconnect.child', function(item) {
+      this.listen(this, 'disconnect.child', function (item) {
         Array.remove(this.children, item);
         item.get_connection('tab').disconnect_all();
 
@@ -1240,7 +1249,7 @@ var Bloom = (function() {
 
       });
     },
-    set_tab: function(item) {
+    set_tab: function (item) {
       if (typeof item == 'number') {
         item = this.children[item];
       }
@@ -1259,7 +1268,7 @@ var Bloom = (function() {
   Bloom.import_members = Object.getOwnPropertyNames(Bloom);
   delete Bloom.import_members.extend;
 
-  Bloom.import_all = function() {
+  Bloom.import_all = function () {
     MetaHub.extend(MetaHub.Global, Bloom, Bloom.import_members);
   }
 
@@ -1268,7 +1277,7 @@ var Bloom = (function() {
 
 // Any members added here will not be imported.
 
-Bloom.alert = function(message, title) {
+Bloom.alert = function (message, title) {
   var dialog = Alert_Dialog.create({
     title: title,
     message: message
@@ -1277,7 +1286,7 @@ Bloom.alert = function(message, title) {
   dialog.show();
 };
 
-Bloom.join = function() {
+Bloom.join = function () {
   var i, args = [];
   for (var i = 0; i < arguments.length; ++i) {
     var x = arguments[i];
@@ -1309,18 +1318,18 @@ Bloom.join = function() {
   // Ensure that arguments don't have a slash in front of them.
   // Not essential but leads to cleaner output.
   if (args.length > 1 && args[args.length - 1][0] == '?') {
-     args[args.length - 2] += args.pop();
+    args[args.length - 2] += args.pop();
   }
 
   return args.join('/');
 }
 
-Bloom.get = function(url, action, error, sync) {
+Bloom.get = function (url, action, error, sync) {
   if (Bloom.ajax_prefix) {
     url = Bloom.join(Bloom.ajax_prefix, url);
   }
 
-  var success = function(response) {
+  var success = function (response) {
     try {
       var json = JSON.parse(response);
     }
@@ -1346,7 +1355,7 @@ Bloom.get = function(url, action, error, sync) {
 //  console.log('async', !sync);
 
   if (window.TESTING) {
-    error = function(x, status, message) {
+    error = function (x, status, message) {
       throw new Error(status + ': ' + message + ' for ' + url);
     }
   }
@@ -1361,10 +1370,10 @@ Bloom.get = function(url, action, error, sync) {
   });
 };
 
-Bloom.output = function() {
+Bloom.output = function () {
 };
 
-Bloom.post = function(url, seed, success, error) {
+Bloom.post = function (url, seed, success, error) {
   if (success === undefined) {
     success = seed;
     seed = null;
@@ -1374,7 +1383,7 @@ Bloom.post = function(url, seed, success, error) {
     url = Bloom.ajax_prefix + url;
   }
 
-  var action = function(response) {
+  var action = function (response) {
     if ((response.result && response.result.toLowerCase() == 'success') || response.success) {
       if (success) {
         success(response);
@@ -1394,12 +1403,12 @@ Bloom.post = function(url, seed, success, error) {
   });
 }
 
-Bloom.post_json = function(url, seed, success, error) {
+Bloom.post_json = function (url, seed, success, error) {
   if (Bloom.ajax_prefix) {
     url = Bloom.ajax_prefix + url;
   }
 
-  var action = function(response) {
+  var action = function (response) {
     var good = true;
     // All these checks are for backwards compatibility and are deprecated.
     if (typeof response.result === 'string' && response.result.toLowerCase() != 'success') {
@@ -1410,8 +1419,8 @@ Bloom.post_json = function(url, seed, success, error) {
       good = false;
     }
     if (good && typeof success === 'function') {
-        success(response);
-      }
+      success(response);
+    }
 
     if (typeof Bloom.output == 'function') {
       Bloom.output(response);
@@ -1430,41 +1439,41 @@ Bloom.post_json = function(url, seed, success, error) {
   });
 }
 
-Bloom.get_url_property = function(name) {
+Bloom.get_url_property = function (name) {
   return Bloom.get_url_properties()[name];
 }
 
-Bloom.get_url_properties = function() {
+Bloom.get_url_properties = function () {
   var result;
 //  if (window.result) {
 //    result = window.result;
 //  }
 //  else {
-    var items = window.location.search.slice(1).split(/[\&=]/);
-    if (items.length < 2)
-      return {};
+  var items = window.location.search.slice(1).split(/[\&=]/);
+  if (items.length < 2)
+    return {};
 
-    result = window.result = {};
-    for (var x = 0; x < items.length; x += 2) {
-      result[items[x]] = decodeURIComponent(items[x + 1].replace(/\+/g, ' '));
-    }
+  result = window.result = {};
+  for (var x = 0; x < items.length; x += 2) {
+    result[items[x]] = decodeURIComponent(items[x + 1].replace(/\+/g, ' '));
+  }
 //  }
   return result;
 }
 
-Bloom.carrot = function() {
+Bloom.carrot = function () {
   $('body').css('backMulch', 'orange');
   document.title = "What's Up Doc?";
 };
 
-Bloom.edit_text = function(element, finished) {
+Bloom.edit_text = function (element, finished) {
   var text = element.text();
   element.html('<input type="text"/>');
   var input = element.find('input');
   input.val(text);
   input.select();
 
-  var finish = function() {
+  var finish = function () {
     var value = input.val();
     element.text(value);
     if (typeof finished == 'function') {
@@ -1473,7 +1482,7 @@ Bloom.edit_text = function(element, finished) {
   };
 
   input.blur(finish);
-  input.keypress(function(event) {
+  input.keypress(function (event) {
     event.bubbles = false;
     event.stopPropagation();
     if (event.keyCode == 13) {
@@ -1482,12 +1491,12 @@ Bloom.edit_text = function(element, finished) {
   });
 };
 
-Bloom.watch_input = function(input, action, delay) {
+Bloom.watch_input = function (input, action, delay) {
   if (!delay && delay !== 0)
     delay = 800;
   var timer = null;
 
-  var finished = function(event) {
+  var finished = function (event) {
     if (timer) {
       clearTimeout(timer);
       timer = null;
@@ -1496,11 +1505,11 @@ Bloom.watch_input = function(input, action, delay) {
   }
 
   input.change(
-          function(event) {
-            finished(event)
-          });
+    function (event) {
+      finished(event)
+    });
 
-  input.keypress(function(event) {
+  input.keypress(function (event) {
     // For browsers that fire keypress and keyup on backspace,
     // ensure only the keypress hook captures it to avoid double responses.
     if (event.keyCode == 8)
@@ -1520,7 +1529,7 @@ Bloom.watch_input = function(input, action, delay) {
 
   // Chrome (possibly all of webkit?) doesn't fire keypress
   // on backspace, but it does fire keyup
-  input.keyup(function(event) {
+  input.keyup(function (event) {
     if (event.keyCode == 8) {
       if (timer) {
         clearTimeout(timer);
@@ -1530,26 +1539,26 @@ Bloom.watch_input = function(input, action, delay) {
   });
 };
 
-Bloom.bind_input = function(input, owner, name, source) {
+Bloom.bind_input = function (input, owner, name, source) {
   input.val(owner[name]);
 
-  Bloom.watch_input(input, function() {
+  Bloom.watch_input(input, function () {
     owner.value(name, input.val(), source);
   });
 
-  source.listen(owner, 'change.' + name, function(value) {
+  source.listen(owner, 'change.' + name, function (value) {
     input.val(value);
   });
 
-  input.focus(function() {
+  input.focus(function () {
     input.select();
   });
 }
 
-Bloom.initialize_page = function(Page) {
+Bloom.initialize_page = function (Page) {
   MetaHub.metanize(Page);
 
-  jQuery(function() {
+  jQuery(function () {
     if (window.UNIT_TEST == undefined) {
       var landscape_element = $('#garden-landscape');
       if (landscape_element.length) {
@@ -1563,15 +1572,15 @@ Bloom.initialize_page = function(Page) {
         Page.initialize_core();
       }
       Page.load(Mulch);
-      Mulch.load_resources(function() {
+      Mulch.load_resources(function () {
         Page.initialize();
       });
     }
   });
 }
 
-Bloom.render_query = function(parameters) {
-    if (!parameters || typeof parameters !== 'object')
+Bloom.render_query = function (parameters) {
+  if (!parameters || typeof parameters !== 'object')
     return '';
 
   var result = MetaHub.extend({}, parameters);
