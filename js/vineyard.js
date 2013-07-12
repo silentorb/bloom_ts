@@ -310,7 +310,7 @@ var Vineyard = (function () {
           seed[primary_key] = response[primary_key];
 
         if (typeof success === 'function') {
-          success(seed);
+          success(seed, response);
         }
         if (silent)
           return;
