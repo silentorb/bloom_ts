@@ -394,8 +394,8 @@ var Bloom = (function () {
         return;
 
       for (var name in this.seed) {
-        var element = this.element.find('#' + name + ', .' + name + ', [bind=' + name + '], [name=' + name + ']').first();
-        if (element.length == 1) {
+        var element = this.element.find('#' + name + ', .' + name + ', [bind=' + name + '], [name=' + name + ']');
+        if (element.length > 0) {
           var property = this.seed[name];
           if (typeof property == 'function') {
             value = property.apply(this.seed);
@@ -492,21 +492,24 @@ var Bloom = (function () {
     seed_name: 'seed'
   });
 
-  Flower.set_value = function (element, value) {
-    if (Flower.is_input(element)) {
-      if (element.attr('type') == 'checkbox') {
-        if (value === true || value === 'true')
-          element.attr('checked', 'checked');
-        else
-          element.removeAttr('checked');
+  Flower.set_value = function (elements, value) {
+    elements.each(function() {
+      var element = $(this);
+      if (Flower.is_input(element)) {
+        if (element.attr('type') == 'checkbox') {
+          if (value === true || value === 'true')
+            element.attr('checked', 'checked');
+          else
+            element.removeAttr('checked');
+        }
+        else {
+          element.val(value);
+        }
       }
       else {
-        element.val(value);
+        element.html(value);
       }
-    }
-    else {
-      element.html(value);
-    }
+    });
   };
 
   Flower.is_input = function (element) {
