@@ -2,7 +2,7 @@ MetaHub.import_all();
 Bloom.import_all();
 Vineyard.import_all();
 
-var Edit_Arbor = Vineyard.Arbor.sub_class('Edit_Arbor', {
+var Edit_Arbor = Vineyard.Natural_Arbor.sub_class('Edit_Arbor', {
   block: 'edit-form',
   initialize: function (garden) {
     this.garden = garden;
@@ -43,7 +43,8 @@ var Plot = Flower.sub_class('Plot', {
   arbors: {},
   default_arbor: Edit_Arbor,
   initialize: function () {
-    this.element = $('<div />');
+    if (!this.element || this.element.length == 0)
+      this.element = $('<div />');
   },
   get_arbor: function (trellis, action) {
     var name;
@@ -63,6 +64,12 @@ var Plot = Flower.sub_class('Plot', {
     if (this.arbors[trellis.name])
       return this.arbors[trellis.name];
     return this.default_arbor;
+  },
+  get_content: function () {
+    if (this.content)
+      return this.content;
+    else
+      return this.element;
   },
   get_trellis: function (seed, request) {
     if (seed.trellis)
@@ -98,20 +105,25 @@ var Plot = Flower.sub_class('Plot', {
       this.refresh(this.arbor.seed, seed, edit.element);
     }
     else {
+      // This is the same as refresh because refresh is designed to
+      // be overwritten, and this block will work the same if it is.
+      var content = this.get_content();
       this.set_header(seed);
-      this.element.empty();
-      this.element.append(edit.element);
+      content.empty();
+      content.append(edit.element);
     }
 
     this.arbor = edit;
   },
-  refresh: function(old_seed, seed, element) {
+  refresh: function (old_seed, seed, element) {
+    var content = this.get_content();
     this.set_header(seed);
-    this.element.empty();
-    this.element.append(element);
+    content.empty();
+    content.append(element);
   },
   replace_element: function (new_element) {
-    this.element.empty();
+    var content = this.get_content();
+    content.empty();
     this.append(new_element);
   },
   set_garden: function (garden) {
@@ -216,26 +228,39 @@ var Garden = Meta_Object.subclass('Garden', {
   get_plot_type: function (request) {
     return this.irrigation.get_plot(request.trellis);
   },
-  goto_item: function (trellis_name, args) {
-    var id = null, arg_string, self = this;
-    if (typeof trellis_name == 'object') {
-      var request = trellis_name;
-      trellis_name = trellis_name.trellis || trellis_name.name;
-      args = args || {};
-      if (request.parameters)
-        args = MetaHub.extend(args, request.parameters);
-      id = request.id;
+  goto_item: function (target, args) {
+    var trellis_name, id = null, arg_string, self = this;
+    args = args || {};
+
+    // All sorts of args are passed around, and some types
+    // are not used here.  Any collection of args that contains
+    // objects can be quickly identified as a collection to ignore.
+    for (var i in args) {
+      if (typeof args[i] == 'object') {
+        args = {};
+        break;
+      }
     }
-
-//        // Ensure arguments are in string form.
-//        if (typeof args == 'object') {
-//            arg_string = Bloom.render_query(args);
-//            self.request.args = args;
-//        }
-//        else {
-//            arg_string = args;
-//        }
-
+    if (typeof target == 'object') {
+      // Check if it is a seed.
+      if (typeof target.trellis == 'object') {
+        trellis_name = target.trellis.name;
+        id = target[target.trellis.primary_key];
+        if (id === undefined)
+          return;
+      }
+      else {
+        var request = target;
+        trellis_name = target.trellis;
+        if (request.parameters) {
+          id = request.parameters.id;
+          args = request.parameters;
+        }
+        else {
+          id = request.id;
+        }
+      }
+    }
     this.load_seed(trellis_name, id, args, function (seed) {
       if (!seed)
         return;
@@ -244,7 +269,6 @@ var Garden = Meta_Object.subclass('Garden', {
       var plot = self.get_plot(self.request);
       if (plot) {
         plot.load_edit(seed, self.request);
-//                self.invoke('edit', seed);
       }
     });
   },
@@ -442,33 +466,49 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
   vineyard: null,
   initialize: function (vineyard) {
     this.vineyard = vineyard;
-    this.add_channel(['%trellis', '%id', '%action']);
-    this.add_channel(['%trellis', '%id']);
-    this.add_channel(['%trellis', '%action']);
-    this.add_channel(['%trellis']);
+    this.add_channel(['%trellis', '%id', '%action?']);
+    this.add_channel(['%trellis', '%action?']);
   },
   add_channel: function (pattern, action) {
-    var result = {
-      pattern: Irrigation.convert_path_to_array(pattern),
-      action: action
+    pattern = Irrigation.convert_path_to_array(pattern);
+    var priority = this.calculate_priority(pattern);
+    var i, channel, result = {
+      pattern: pattern,
+      action: action,
+      priority: priority
     };
-    this.channels.push(result);
+
+    // Find the right slot based on priority.
+    // This is faster than resorting the array
+    // every time a channel is added.
+    for (i = 0; i < this.channels.length; ++i) {
+      channel = this.channels[i];
+      if (channel.priority < priority)
+        break;
+    }
+    this.channels.splice(i, 0, result);
+
     return result;
   },
-  apply_pattern: function (path, channel) {
+  apply_pattern: function (pattern, path) {
     if (typeof path !== 'object')
       throw new Error('path must be an array');
 
-    if (typeof channel !== 'object')
+    if (typeof pattern !== 'object')
       throw new Error('channel must be an array');
 
-    if (path.length !== channel.length)
-      throw new Error('Irrigation.apply_pattern() requires a path and channel with the same length. (path.length = ' +
-        path.length + '. channel.length = ' + channel.length + '.)');
+//    if (path.length !== channel.length)
+//      throw new Error('Irrigation.apply_pattern() requires a path and channel with the same length. (path.length = ' +
+//        path.length + '. channel.length = ' + channel.length + '.)');
 
+    var processed_pattern = this.compare(pattern, path);
+    if (!processed_pattern)
+      throw new Error('Pattern/path mismatch: ' + pattern.join('/') + ' != ' + path.join('/'));
+
+//    console.log('pattern', processed_pattern)
     var result = {};
     for (var i = 0; i < path.length; ++i) {
-      var part = channel[i];
+      var part = processed_pattern[i];
       if (part[0] == '%') {
         var type = part.substring(1);
         result[type] = this.convert_value(path[i], type);
@@ -477,28 +517,55 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
 
     return result;
   },
-  compare: function (a, b) {
-    a = Irrigation.convert_path_to_array(a);
-    b = Irrigation.convert_path_to_array(b);
-
-    if (a.length != b.length)
-      return false;
-
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] == '*' || b[i] == '*')
-        continue;
-
-      if (a[i][0] == '%' && this.compare_parts(a[i], b[i]))
-        continue;
-
-      if (b[i][0] == '%' && this.compare_parts(b[i], a[i]))
-        continue;
-
-      if (a[i] != b[i])
-        return false;
+  calculate_priority: function (path) {
+    var bindings = 0;
+    for (var i = 0; i < path.length; ++i) {
+      if (path[i][0] == '%') {
+        bindings += 2;
+        var type = this.parameters[path[i].substring(1)];
+        if (type && type != 'string')
+          ++bindings;
+      }
     }
 
-    return true;
+    return bindings + (path.length * 2);
+  },
+  compare: function (primary, secondary) {
+    a = Irrigation.convert_path_to_array(primary);
+    b = Irrigation.convert_path_to_array(secondary);
+    var result = [];
+
+    // Optional parameters can only be in the primary path,
+    // so the secondary path can be possibly shorter but
+    // never longer than the primary path.
+    if (a.length < b.length)
+      return false;
+
+    var x = -1;
+    for (var y = 0; y < b.length; y++) {
+      if (++x >= a.length)
+        return false;
+
+      var ax = a[x], by = b[y];
+      var ax_pure = ax.replace(/\?$/, '');
+
+      if (ax_pure == by
+        || ax == '*'
+        || (ax[0] == '%' && this.compare_parts(ax_pure, by))) {
+        result.push(ax_pure);
+        continue;
+      }
+
+      // Handle optional parameters
+      if (ax[ax.length - 1] == '?') {
+        --y;
+        continue;
+      }
+
+      return false;
+    }
+
+    return result;
   },
   compare_parts: function (name, value) {
     var type = this.parameters[name.substring(1)];
@@ -548,7 +615,7 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
   find_channel: function (path) {
     for (var i = 0; i < this.channels.length; i++) {
       var channel = this.channels[i];
-      if (this.compare(path, channel.pattern)) {
+      if (this.compare(channel.pattern, path)) {
         return channel;
       }
     }
@@ -627,26 +694,27 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
 
     var channel = this.find_channel(path);
     if (channel) {
-      MetaHub.extend(request, this.apply_pattern(path, channel.pattern));
+      MetaHub.extend(request, this.apply_pattern(channel.pattern, path));
 
       if (typeof channel.action === 'function')
         MetaHub.extend(request, channel.action(path));
     }
-
-    if (path.length > 1) {
-      if (path.length > 2) {
-        request.id = path[1];
-        request.action = path[2];
-      }
-      else {
-        if (path[1].match(/\d+/))
+    else {
+      if (path.length > 1) {
+        if (path.length > 2) {
           request.id = path[1];
-        else
-          request.action = path[1];
+          request.action = path[2];
+        }
+        else {
+          if (path[1].match(/\d+/))
+            request.id = path[1];
+          else
+            request.action = path[1];
+        }
       }
+      if (request.id === undefined && request.parameters.id !== undefined)
+        request.id = request.parameters.id;
     }
-    if (request.id === undefined && request.parameters.id !== undefined)
-      request.id = request.parameters.id;
 
     request.path_string = request.path.join('/');
     return request;

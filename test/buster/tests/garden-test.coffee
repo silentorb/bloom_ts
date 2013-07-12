@@ -40,17 +40,20 @@ buster.testCase 'Irrigation',
     assert @irrigation.compare(@irrigation.channels[3].pattern, 'warrior')
 
     assert @irrigation.compare('hello/frog', 'hello/frog')
-    assert @irrigation.compare('hello/frog', 'hello/*')
+    refute @irrigation.compare('hello/frog', 'hello/*')
     assert @irrigation.compare('hello/frog', ['hello', 'frog'])
     assert @irrigation.compare(['*', 'frog'], ['hello', 'frog'])
     refute @irrigation.compare(['*', 'frog'], 'b/c')
     refute @irrigation.compare('hello/frog', ['hello', 'frog', '2'])
+    assert @irrigation.compare('hello/frog?', 'hello')
+    assert @irrigation.compare('hello/frog?/is/cool', 'hello/frog/is/cool')
+    assert @irrigation.compare('hello/frog?/is/cool', 'hello/is/cool')
 
   find_channel: ->
     channel = @irrigation.find_channel('warrior/take')
     assert.isObject channel
     assert.equals channel.pattern[0], '%trellis'
-    assert.equals channel.pattern[1], '%action'
+    assert.equals channel.pattern[1], '%action?'
 
     channel = @irrigation.find_channel('warrior/10')
     assert.isObject channel
@@ -69,8 +72,12 @@ buster.testCase 'Irrigation',
   apply_pattern: ->
     channel = @irrigation.find_channel('warrior')
     assert channel
-    result = @irrigation.apply_pattern(['warrior'], channel.pattern)
+    result = @irrigation.apply_pattern(channel.pattern, ['warrior'])
     assert.equals result.trellis, 'warrior'
+
+    result = @irrigation.apply_pattern(channel.pattern, ['warrior', 'die'])
+    assert.equals result.trellis, 'warrior'
+    assert.equals result.action, 'die'
 
   get_request_from_string: ->
     request = @irrigation.get_request_from_string('warrior')
