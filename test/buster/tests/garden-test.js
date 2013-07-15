@@ -56,7 +56,8 @@ buster.testCase('Irrigation', {
     refute(this.irrigation.compare('hello/frog', ['hello', 'frog', '2']));
     assert(this.irrigation.compare('hello/frog?', 'hello'));
     assert(this.irrigation.compare('hello/frog?/is/cool', 'hello/frog/is/cool'));
-    return assert(this.irrigation.compare('hello/frog?/is/cool', 'hello/is/cool'));
+    assert(this.irrigation.compare('hello/frog?/is/cool', 'hello/is/cool'));
+    return refute(this.irrigation.compare('track/todo/create', 'track/todo'));
   },
   find_channel: function() {
     var channel;
@@ -84,9 +85,6 @@ buster.testCase('Irrigation', {
     assert(channel);
     result = this.irrigation.apply_pattern(channel.pattern, ['warrior']);
     assert.equals(result.trellis, 'warrior');
-
-    channel = this.irrigation.find_channel('warrior/action');
-    assert(channel);
     result = this.irrigation.apply_pattern(channel.pattern, ['warrior', 'die']);
     assert.equals(result.trellis, 'warrior');
     return assert.equals(result.action, 'die');

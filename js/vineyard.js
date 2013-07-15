@@ -216,8 +216,11 @@ var Vineyard = (function () {
                   continue;
 
                 //var child = list[i] = Seed.create(list[i], property.target_trellis);
+                var is_object = typeof list[i] === 'object'
                 var child = list[i] = property.target_trellis.create_seed(list[i]);
-                child._is_proxy = true;
+                if (!is_object)
+                  child._is_proxy = true;
+
                 child.connect(seed, 'parent', property.target_trellis.name);
               }
             }
@@ -238,7 +241,8 @@ var Vineyard = (function () {
               continue;
 
             seed[name] = property.target_trellis.create_seed(source[name]);
-            seed[name]._is_proxy = true;
+            if (typeof source[name] !== 'object' )
+              seed[name]._is_proxy = true;
           }
           else {
             if (typeof source[name] !== 'undefined')
@@ -302,7 +306,7 @@ var Vineyard = (function () {
     var primary_key = trellis.primary_key;
 
     var url = trellis.vineyard.garden.irrigation.get_plant_url() + Bloom.render_query({
-      'XDEBUG_SESSION_START': 'netbeans-xdebug'
+//      'XDEBUG_SESSION_START': 'netbeans-xdebug'
     });
     Bloom.post_json(url, data, function (response) {
       if (response.success && Bloom.output) {
@@ -319,9 +323,11 @@ var Vineyard = (function () {
           message: 'Saved.'
         });
 
-        trellis.vineyard.invoke('seed-updated', seed);
+        trellis.vineyard.invoke('seed-updated', seed, response);
 
       }
+    }, function(  jqXHR,  textStatus,  errorThrown) {
+
     });
   }
 

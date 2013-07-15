@@ -34,10 +34,10 @@ buster.testCase 'Irrigation',
 
   initialize: ->
     irrigation = Fixtures.create_garden().irrigation
-    assert.greater irrigation.channels.length, 3
+    assert.greater irrigation.channels.length, 1
 
   compare: ->
-    assert @irrigation.compare(@irrigation.channels[3].pattern, 'warrior')
+    assert @irrigation.compare(@irrigation.channels[1].pattern, 'warrior')
 
     assert @irrigation.compare('hello/frog', 'hello/frog')
     refute @irrigation.compare('hello/frog', 'hello/*')
@@ -48,6 +48,7 @@ buster.testCase 'Irrigation',
     assert @irrigation.compare('hello/frog?', 'hello')
     assert @irrigation.compare('hello/frog?/is/cool', 'hello/frog/is/cool')
     assert @irrigation.compare('hello/frog?/is/cool', 'hello/is/cool')
+    refute @irrigation.compare('track/todo/create', 'track/todo')
 
   find_channel: ->
     channel = @irrigation.find_channel('warrior/take')

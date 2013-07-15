@@ -242,18 +242,23 @@ var Garden = Meta_Object.subclass('Garden', {
       }
     }
     if (typeof target == 'object') {
-      // Check if it is a seed.
+      // Is target a seed?
       if (typeof target.trellis == 'object') {
         trellis_name = target.trellis.name;
         id = target[target.trellis.primary_key];
         if (id === undefined)
           return;
       }
+      // Is target a trellis?
+      else if (target.meta_source === Trellis) {
+        trellis_name = target.name;
+      }
+      // Target must be a request (or invalid, which is hard to fully detect.)
       else {
         var request = target;
         trellis_name = target.trellis;
         if (request.parameters) {
-          id = request.parameters.id;
+          id = request.id || request.parameters.id;
           args = request.parameters;
         }
         else {
@@ -315,6 +320,9 @@ var Garden = Meta_Object.subclass('Garden', {
     Bloom.Mulch.load_resources(this.dirt, callback, this.app_path);
   },
   load_seed: function (trellis, id, args, done) {
+    if (!trellis)
+      throw new Error('Missing trellis in call to load_seed!');
+
     var self = this;
     if (typeof args == 'function') {
       done = args;
@@ -541,13 +549,26 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
     if (a.length < b.length)
       return false;
 
-    var x = -1;
-    for (var y = 0; y < b.length; y++) {
+    var length = Math.max(a.length, b.length);
+
+    var x = -1, y = -1, ax, by, ax_pure;
+    for (var i = 0; i < length; i++) {
       if (++x >= a.length)
         return false;
 
-      var ax = a[x], by = b[y];
-      var ax_pure = ax.replace(/\?$/, '');
+      ax = a[x];
+
+      if (++y >= b.length) {
+        if (ax[ax.length - 1] == '?') {
+          --y;
+          continue;
+        }
+        else
+          return false;
+      }
+
+      by = b[y];
+      ax_pure = ax.replace(/\?$/, '');
 
       if (ax_pure == by
         || ax == '*'

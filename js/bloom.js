@@ -412,8 +412,11 @@ var Bloom = (function () {
     },
     element_to_source: function () {
       for (var name in this.seed) {
-        var element = this.element.find('#' + name + ', .' + name + ', [bind=' + name + ']').first();
-        if (element.length == 1) {
+        var element = this.element.find('#' + name + ':input, .' + name + ':input, [bind=' + name + ']:input');
+        if (element.length > 1) {
+          throw new Error('Too many selectors for property: ' + name + '.');
+        }
+        else if (element.length == 1) {
           if (typeof this.seed[name] != 'function' && Flower.is_input(element)) {
             this.seed[name] = element.val();
           }
@@ -493,7 +496,7 @@ var Bloom = (function () {
   });
 
   Flower.set_value = function (elements, value) {
-    elements.each(function() {
+    elements.each(function () {
       var element = $(this);
       if (Flower.is_input(element)) {
         if (element.attr('type') == 'checkbox') {
@@ -510,6 +513,20 @@ var Bloom = (function () {
         element.html(value);
       }
     });
+  };
+
+  Flower.get_value = function (element) {
+    if (Flower.is_input(element)) {
+      if (element.attr('type') == 'checkbox') {
+        return element.prop('checked', true)
+      }
+      else {
+        return element.val();
+      }
+    }
+    else {
+      return element.text();
+    }
   };
 
   Flower.is_input = function (element) {
