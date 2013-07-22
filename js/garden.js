@@ -63,6 +63,10 @@ var Plot = Flower.sub_class('Plot', {
 
     if (this.arbors[trellis.name])
       return this.arbors[trellis.name];
+
+    if (trellis.parent) {
+      return this.get_arbor(trellis.parent, action);
+    }
     return this.default_arbor;
   },
   get_content: function () {
@@ -184,6 +188,7 @@ var Garden = Meta_Object.subclass('Garden', {
       if (state.direction == 'back')
         Plot.direction = 'forward';
       self.request = self.irrigation.get_request();
+      self.invoke('history.change', self.request);
       self.process_request(self.request);
     }
 
@@ -340,7 +345,15 @@ var Garden = Meta_Object.subclass('Garden', {
         return;
       }
 
-      var seed = self.vineyard.trellises[trellis].create_seed(response.objects[0]);
+      var source = response.objects[0];
+
+      // Wrap trellis in an object so it's hooks can change it.
+      var data = {
+        source: source,
+        trellis: trellis
+      }
+      self.invoke('load.seed.' + trellis, data);
+      var seed = self.vineyard.trellises[data.trellis].create_seed(data.source);
       done(seed);
     });
   },

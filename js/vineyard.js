@@ -165,6 +165,31 @@ var Vineyard = (function () {
 
       return null;
     },
+    is_a: function (trellis) {
+      var name;
+      if (!trellis)
+        return false;
+
+      if (typeof trellis === 'string')
+        name = trellis;
+      else
+        name = trellis.name;
+
+      if (!name)
+        return false;
+
+      trellis = this;
+
+      do {
+        if (trellis.name == name)
+          return true;
+
+        trellis = trellis.parent;
+      }
+      while (trellis);
+
+      return false;
+    },
     populate_seed: function (seed, source) {
       var property, i;
       if (typeof source != 'object') {
@@ -241,7 +266,7 @@ var Vineyard = (function () {
               continue;
 
             seed[name] = property.target_trellis.create_seed(source[name]);
-            if (typeof source[name] !== 'object' )
+            if (typeof source[name] !== 'object')
               seed[name]._is_proxy = true;
           }
           else {
@@ -326,7 +351,7 @@ var Vineyard = (function () {
         trellis.vineyard.invoke('seed-updated', seed, response);
 
       }
-    }, function(  jqXHR,  textStatus,  errorThrown) {
+    }, function (jqXHR, textStatus, errorThrown) {
 
     });
   }

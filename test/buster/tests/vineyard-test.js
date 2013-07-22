@@ -84,6 +84,23 @@ buster.testCase("Arbor", {
   }
 });
 
+buster.testCase('Trellis', {
+  setUp: function() {
+    return this.vineyard = Vineyard.create(test_model.trellises);
+  },
+  is_a: function() {
+    var base, warrior;
+    warrior = this.vineyard.trellises['warrior'];
+    base = this.vineyard.trellises['base'];
+    assert(warrior.is_a('base'));
+    assert(warrior.is_a('warrior'));
+    assert(warrior.is_a(base));
+    assert(base.is_a(base));
+    refute(warrior.is_a('frog'));
+    return refute(base.is_a('warrior'));
+  }
+});
+
 buster.testCase('Seed', {
   setUp: function() {
     return this.vineyard = Vineyard.create(test_model.trellises);

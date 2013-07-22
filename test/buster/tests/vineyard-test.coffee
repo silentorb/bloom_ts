@@ -73,6 +73,19 @@ buster.testCase "Arbor",
     refute.same warriors[0]._plantable, false
     refute.same items[0]._plantable, false
 
+buster.testCase 'Trellis',
+  setUp: ->
+    @vineyard = Vineyard.create(test_model.trellises)
+
+  is_a: ->
+    warrior = @vineyard.trellises['warrior']
+    base = @vineyard.trellises['base']
+    assert warrior.is_a('base')
+    assert warrior.is_a('warrior')
+    assert warrior.is_a(base)
+    assert base.is_a(base)
+    refute warrior.is_a('frog')
+    refute base.is_a('warrior')
 
 buster.testCase 'Seed',
   setUp: ->
