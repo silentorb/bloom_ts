@@ -237,7 +237,7 @@ var Vineyard = (function () {
 
             if (list && list.length) {
               for (i = 0; i < list.length; i++) {
-                if (list[0].meta_source === Seed)
+                if (list[i].meta_source === Seed)
                   continue;
 
                 //var child = list[i] = Seed.create(list[i], property.target_trellis);

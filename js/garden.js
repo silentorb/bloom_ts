@@ -716,9 +716,18 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
       id = seed[seed.trellis.primary_key];
     }
 
-//        var channel = this.get_channel(type);
-//        var trellis = this.get_trellis(trellis);
-    return Bloom.join(this.app_path, trellis, id, action) + Bloom.render_query(args);
+    // Allow hooks to override the arguments.
+    var data = {
+      trellis: trellis,
+      id: id,
+      action: action,
+      args: args
+    };
+    if (trellis) {
+      this.invoke('url.' + trellis, data, seed);
+    }
+
+    return Bloom.join(this.app_path, data.trellis, data.id, data.action) + Bloom.render_query(data.args);
   },
   get_request: function () {
     return this.get_request_from_string(window.location.pathname);
