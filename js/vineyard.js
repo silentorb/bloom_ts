@@ -370,15 +370,15 @@ var Vineyard = (function () {
     if (typeof seed != 'object')
       throw new Error('Seed.prepare_for_planting() requires an object');
 
-    if (seed._is_proxy)
-      return undefined;
-
     trellis = trellis || seed.trellis;
     if (!trellis)
       throw new Error('Missing trellis.');
 
     var property, name, type, item = {}, p;
     var primary_key = trellis.primary_key;
+
+    if (seed._is_proxy)
+      return seed[primary_key];
 
     if (typeof seed.guid === 'string') {
       if (bag.seeds[seed.guid]) {

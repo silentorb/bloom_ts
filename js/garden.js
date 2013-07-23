@@ -288,7 +288,12 @@ var Garden = Meta_Object.subclass('Garden', {
   lightning: function (url, multiple, silent) {
     var args = Array.prototype.slice.call(arguments);
     if (typeof url === 'object') {
-      url = this.irrigation.url.apply(this.irrigation, args);
+      if (Object.prototype.toString.call(url) === '[object Array]') {
+        url = Bloom.join(this.app_path, url.join('/'));
+      }
+      else {
+        url = this.irrigation.url.apply(this.irrigation, args);
+      }
     }
     if (args[args.length - 1] !== true) {
       history.pushState({
