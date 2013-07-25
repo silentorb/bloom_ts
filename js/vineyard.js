@@ -331,7 +331,7 @@ var Vineyard = (function () {
     var primary_key = trellis.primary_key;
 
     var url = trellis.vineyard.garden.irrigation.get_plant_url() + Bloom.render_query({
-//      'XDEBUG_SESSION_START': 'netbeans-xdebug'
+      'XDEBUG_SESSION_START': 'netbeans-xdebug'
     });
     Bloom.post_json(url, data, function (response) {
       if (response.success && Bloom.output) {
@@ -610,8 +610,7 @@ var Vineyard = (function () {
       Bloom.watch_input(input, function (value) {
         if (value) {
           var date = new Date(value);
-          value = (date.getMonth() + 1) + '/' + date.getDate() + '/' + date.getFullYear();
-//          value = date.getTime() / 1000;
+          value = date.getTime() / 1000;
         }
 
         Vine.update_seed(self, value);
@@ -629,6 +628,8 @@ var Vineyard = (function () {
       return this.element.find('input');
     },
     update_element: function (value) {
+      var date = new Date(value * 1000);
+      value = (date.getMonth() + 1) + '/' + date.getDate() + '/' + date.getFullYear();
       this.input.val(value);
     }
   });
