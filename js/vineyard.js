@@ -610,7 +610,8 @@ var Vineyard = (function () {
       Bloom.watch_input(input, function (value) {
         if (value) {
           var date = new Date(value);
-          value = date.getTime() / 1000;
+          value = (date.getMonth() + 1) + '/' + date.getDate() + '/' + date.getFullYear();
+//          value = date.getTime() / 1000;
         }
 
         Vine.update_seed(self, value);
