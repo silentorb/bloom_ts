@@ -645,32 +645,38 @@ var Vineyard = (function () {
     block: 'reference-vine',
     initialize: function () {
       var self = this;
-      if (!this.seed)
-        return;
 
-      Bloom.get(self.seed.get_url('seed'), function (response) {
-        var select = Bloom.Combo_Box.create(response.objects);
+      this.get_options(function (options) {
+        var select = Bloom.Combo_Box.create(options);
         self.append(select);
-        if (!self.seed) {
-          self.seed = self.owner[self.property.name] = {
-            id: select.get_selection().id
-          };
-        }
+//        if (!self.seed) {
+//          self.seed = self.owner[self.property.name] = {
+//            id: select.get_selection().id
+//          };
+//        }
         var reference = self.seed;
         //        select.set_value(self.owner[self.property.name]);
-        for (var i = 0; i < response.objects.length; i++) {
-          if (response.objects[i].id === reference.id) {
-            select.set_value(i);
-            break;
-          }
-        }
+//        for (var i = 0; i < options.length; i++) {
+//          if (options[i].id === reference.id) {
+//            select.set_value(i);
+//            break;
+//          }
+//        }
 
         self.listen(select, 'change', function (option) {
           //          self.owner[self.property.name] = option.id;
-          reference.id = option.id;
+          self.owner[self.property.name] = option[self.get_target_trellis().primary_key];
+          var k = self;
         });
       });
-    }
+    },
+    get_options: function (success) {
+      // Dummy response.  This function is made to be overriden.
+      success([]);
+    },
+    get_target_trellis: function() {
+    return this.trellis.vineyard.trellises[this.property.trellis];
+  }
   });
 
   var List_Vine = Vine.subclass('List_Vine', {

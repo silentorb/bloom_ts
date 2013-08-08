@@ -720,6 +720,8 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
     var data = {
       trellis: trellis,
       id: id,
+      pre: null,
+      post: null,
       action: action,
       args: args
     };
@@ -727,7 +729,7 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
       this.invoke('url.' + trellis, data, seed);
     }
 
-    return Bloom.join(this.app_path, data.trellis, data.id, data.action) + Bloom.render_query(data.args);
+    return Bloom.join(this.app_path, data.pre, data.trellis, data.id, data.action, data.post) + Bloom.render_query(data.args);
   },
   get_request: function () {
     return this.get_request_from_string(window.location.pathname);
