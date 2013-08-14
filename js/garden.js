@@ -276,10 +276,7 @@ var Garden = Meta_Object.subclass('Garden', {
         return;
 
       self.request.trellis = trellis_name;
-      var plot = self.get_plot(self.request);
-      if (plot) {
-        plot.load_edit(seed, self.request);
-      }
+      self.show_arbor(seed, self.request);
     });
   },
   grow: function () {
@@ -435,7 +432,12 @@ var Garden = Meta_Object.subclass('Garden', {
 
       self.invoke('live');
     });
-
+  },
+  show_arbor: function(seed, request) {
+    var plot = this.get_plot(request);
+    if (plot) {
+      plot.load_edit(seed, request);
+    }
   }
 });
 Garden.grow = function (testing, garden) {
