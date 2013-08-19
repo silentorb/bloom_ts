@@ -359,7 +359,7 @@ var Garden = Meta_Object.subclass('Garden', {
       done(seed);
     });
   },
-  load_seeds: function (trellis, args, done) {
+  load_seeds: function (trellis_name, args, done) {
     var self = this;
     if (typeof args == 'function') {
       done = args;
@@ -367,9 +367,14 @@ var Garden = Meta_Object.subclass('Garden', {
     }
     done = done || function () {
     };
-    var query = Bloom.join(this.app_path, 'vineyard', trellis, Bloom.render_query(args));
+    var query = Bloom.join(this.app_path, 'vineyard', trellis_name, Bloom.render_query(args));
     Bloom.get(query, function (response) {
-      done(response.objects);
+      var objects = response.objects;
+      var trellis = self.vineyard.trellises[trellis_name];
+      for (var i = 0; i < objects.length; ++i) {
+        objects[i] = trellis.create_seed(objects[i]);
+      }
+      done(objects);
     });
   },
   on_create: function (request) {
@@ -433,7 +438,7 @@ var Garden = Meta_Object.subclass('Garden', {
       self.invoke('live');
     });
   },
-  show_arbor: function(seed, request) {
+  show_arbor: function (seed, request) {
     var plot = this.get_plot(request);
     if (plot) {
       plot.load_edit(seed, request);
