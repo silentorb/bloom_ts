@@ -9,7 +9,11 @@ var Edit_Arbor = Vineyard.Natural_Arbor.sub_class('Edit_Arbor', {
     var self = this;
     this.element.find('input[type=submit], button[type=submit], #submit').click(function (e) {
       e.preventDefault();
-      self.seed.plant();
+      Seed.plant(self.seed, self.trellis, false, function(seed, response) {
+        var key = self.trellis.primary_key;
+        self.seed[key] = response.objects[0][key];
+        self.goto_destination(self.seed);
+      });
     });
     this.element.find('#cancel, .cancel').click(function (e) {
       self.garden.vineyard.trellises.todo.disconnect_all('seed');
@@ -32,6 +36,15 @@ var Edit_Arbor = Vineyard.Natural_Arbor.sub_class('Edit_Arbor', {
         self.seed._delete();
       }
     });
+  },
+  destination: function (seed) {
+    return this.garden.irrigation.url(seed);
+  },
+  goto_destination: function (seed) {
+    var destination = this.destination(seed);
+    if (this.garden && destination) {
+      this.garden.lightning(destination);
+    }
   }
 });
 
@@ -67,7 +80,7 @@ var Plot = Flower.sub_class('Plot', {
     if (trellis.parent) {
       return this.get_arbor(trellis.parent, action);
     }
-    return this.default_arbor;
+    return null;
   },
   get_content: function () {
     if (this.content)
@@ -82,31 +95,29 @@ var Plot = Flower.sub_class('Plot', {
     return this.garden.vineyard.trellises[request.trellis];
   },
   index: function (request) {
-    var name = request.trellis;
     var self = this;
-    this.element.empty();
-    var seed = Seed_List.create(self.garden.vineyard.trellises[name]);
-    seed.query = function () {
-      return Bloom.join(self.garden.app_path, 'vineyard', name);
-    };
-    var list = Index_List.create(seed);
-    this.append(list);
-    seed.update();
-    var query = '?action=create&trellis=' + name;
-    var create = $('<div class="create"><a href="' + query + '">Create</a></div>');
-    this.content.prepend(create);
+    var trellis = this.garden.vineyard.trellises[request.trellis];
+    var arbor_type = this.get_arbor(trellis, 'index');
+    if (arbor_type) {
+      var query = '';
+      if (typeof(arbor_type.query) === 'function')
+        query = arbor_type.query(request);
+
+      this.garden.load_seeds(request.trellis, query, function (objects) {
+        self.place_arbor(arbor_type, objects, request);
+      });
+    }
   },
-  load_edit: function (seed, request) {
-    var trellis = this.get_trellis(seed, request);
-    var view, arbor = this.get_arbor(trellis, request.action);
-    this.invoke('load.edit', seed, request, arbor);
+  place_arbor: function (arbor_type, seed, request) {
+    var view, trellis = this.get_trellis(seed, request);
+    this.invoke('load.edit', seed, request, arbor_type);
     if (request.action) {
       view = this.garden.vineyard.views[request.action + '.' + trellis.name];
     }
-    var edit = arbor.create(seed, trellis, view);
-    edit.garden = this.garden;
+    var arbor = arbor_type.create(seed, trellis, view);
+    arbor.garden = this.garden;
     if (this.arbor) {
-      this.refresh(this.arbor.seed, seed, edit.element);
+      this.refresh(this.arbor.seed, seed, arbor.element);
     }
     else {
       // This is the same as refresh because refresh is designed to
@@ -114,10 +125,16 @@ var Plot = Flower.sub_class('Plot', {
       var content = this.get_content();
       this.set_header(seed);
       content.empty();
-      content.append(edit.element);
+      content.append(arbor.element);
     }
 
-    this.arbor = edit;
+    this.arbor = arbor;
+  },
+  place_arbor_from_request: function (seed, request) {
+    var trellis = this.get_trellis(seed, request);
+    var arbor = this.get_arbor(trellis, request.action);
+    arbor = arbor || this.default_arbor;
+    this.place_arbor(arbor, seed, request);
   },
   refresh: function (old_seed, seed, element) {
     var content = this.get_content();
@@ -134,7 +151,7 @@ var Plot = Flower.sub_class('Plot', {
     this.garden = garden;
     this.listen(garden, 'index', this.index);
     //    this.listen(garden, 'create', this.load_create);
-    //    this.listen(garden, 'edit', this.load_edit);
+    //    this.listen(garden, 'edit', this.place_arbor_from_request);
   },
   set_header: function (seed) {
   }
@@ -381,7 +398,7 @@ var Garden = Meta_Object.subclass('Garden', {
     var self = this;
     this.invoke_async('create.' + request.trellis, request, function (request) {
       var item = self.vineyard.trellises[request.trellis].create_seed(request.parameters);
-      self.plot.load_edit(item, request);
+      self.plot.place_arbor_from_request(item, request);
       self.invoke('edit', item, request);
     });
   },
@@ -441,7 +458,7 @@ var Garden = Meta_Object.subclass('Garden', {
   show_arbor: function (seed, request) {
     var plot = this.get_plot(request);
     if (plot) {
-      plot.load_edit(seed, request);
+      plot.place_arbor_from_request(seed, request);
     }
   }
 });

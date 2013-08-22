@@ -230,6 +230,7 @@ var Bloom = (function () {
 
   var Flower = Meta_Object.subclass('Flower', {
     override_parameters: false,
+    autobind: true,
     initialize: function () {
       // The default method Bloom has used to pass arguments
       // to Flowers has a lot of benefits and works well much
@@ -269,7 +270,7 @@ var Bloom = (function () {
         // be handled later.
         this.render();
       }
-      else {
+      else if (this.autobind) {
         this.source_to_element();
       }
 
@@ -292,7 +293,9 @@ var Bloom = (function () {
       if (self.element.length == 0) {
         throw new Error('self.element is empty!');
       }
-      self.source_to_element();
+      if (this.autobind)
+        self.source_to_element();
+
       if (typeof onload == 'function')
         onload(self);
       //});
@@ -853,7 +856,9 @@ var Bloom = (function () {
       });
 
       this.listen(this, 'submit', function () {
-        self.element_to_source();
+        if (self.autobind)
+          self.element_to_source();
+
         self.close();
       });
 
@@ -962,7 +967,9 @@ var Bloom = (function () {
           }
 
           if (self.form && typeof self.form.submit === 'function') {
-            self.element_to_source();
+            if (self.autobind)
+              self.element_to_source();
+
             self.form.submit();
           }
         }

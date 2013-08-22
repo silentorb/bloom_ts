@@ -165,6 +165,12 @@ var Vineyard = (function () {
 
       return null;
     },
+    get_plural: function () {
+      if (this.plural)
+        return this.plural;
+
+      return this.name + 's';
+    },
     is_a: function (trellis) {
       var name;
       if (!trellis)
@@ -674,9 +680,9 @@ var Vineyard = (function () {
       // Dummy response.  This function is made to be overriden.
       success([]);
     },
-    get_target_trellis: function() {
-    return this.trellis.vineyard.trellises[this.property.trellis];
-  }
+    get_target_trellis: function () {
+      return this.trellis.vineyard.trellises[this.property.trellis];
+    }
   });
 
   var List_Vine = Vine.subclass('List_Vine', {
@@ -777,6 +783,8 @@ var Vineyard = (function () {
 
       if (trellis) {
         this.vineyard = trellis.vineyard;
+        if (this.vineyard.garden)
+          this.garden = this.vineyard.garden;
 
         if (view === undefined && this.vineyard.views[trellis.name]) {
           this.view = this.vineyard.views[trellis.name];
