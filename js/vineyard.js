@@ -171,6 +171,15 @@ var Vineyard = (function () {
 
       return this.name + 's';
     },
+    get_reference: function (trellis_name) {
+      for (var i in this.properties) {
+        var property = this.properties[i];
+        if (property.trellis == trellis_name)
+          return property;
+      }
+
+      return null;
+    },
     is_a: function (trellis) {
       var name;
       if (!trellis)
@@ -299,9 +308,9 @@ var Vineyard = (function () {
       this.value = Meta_Object.value;
       this.listen(this, 'connect.child', this._on_child_connect);
     },
-    _delete: function (silent) {
+    _delete: function (silent, success) {
       this._deleted = true;
-      this._plant(silent);
+      this._plant(silent, success);
     },
     _on_child_connect: function (child, type) {
       this.listen(child, 'delete', function (child) {
@@ -326,13 +335,23 @@ var Vineyard = (function () {
       silent = false;
     }
 
-    if (seed._is_proxy)
-      throw new Error("Cannot plant proxy seeds.");
-
-    var item = Seed.prepare_for_planting(seed, trellis);
-    var data = {
-      objects: [ item ]
+    var seeds, data = {
+      objects: [ ]
     };
+
+    if (!Object.is_array(seed)) {
+      seeds = [ seed ];
+    }
+    else {
+      seeds = seed;
+    }
+
+    for (var i = 0; i < seeds.length; ++i) {
+      if (seeds[i]._is_proxy)
+        throw new Error("Cannot plant proxy seeds.");
+
+      data.objects.push(Seed.prepare_for_planting(seeds[i], trellis));
+    }
 
     var primary_key = trellis.primary_key;
 
@@ -341,9 +360,10 @@ var Vineyard = (function () {
     });
     Bloom.post_json(url, data, function (response) {
       if (response.success && Bloom.output) {
-        if (seed[primary_key] === undefined)
-          seed[primary_key] = response[primary_key];
-
+        if (!Object.is_array(seed)) {
+          if (seed[primary_key] === undefined)
+            seed[primary_key] = response[primary_key];
+        }
         if (typeof success === 'function') {
           success(seed, response);
         }
@@ -355,7 +375,6 @@ var Vineyard = (function () {
         });
 
         trellis.vineyard.invoke('seed-updated', seed, response);
-
       }
     }, function (jqXHR, textStatus, errorThrown) {
 
@@ -767,19 +786,16 @@ var Vineyard = (function () {
     block: 'list',
     override_parameters: true,
     initialize: function (seed, trellis, view) {
-      if (!seed)
-        return;
-
-      this.seed = seed;
       if (trellis !== undefined)
         this.trellis = trellis;
 
       if (view !== undefined)
         this.view = view;
 
-      if (seed.meta_source === Seed) {
-        this.trellis = trellis = seed.trellis;
-      }
+      if (!seed)
+        return;
+
+      this.seed = seed;
 
       if (trellis) {
         this.vineyard = trellis.vineyard;

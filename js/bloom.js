@@ -1411,11 +1411,11 @@ Bloom.post = function (url, seed, success, error) {
   }
 
   var action = function (response) {
-    if ((response.result && response.result.toLowerCase() == 'success') || response.success) {
-      if (success) {
-        success(response);
-      }
+//    if ((response.result && response.result.toLowerCase() == 'success') || response.success) {
+    if (success) {
+      success(response);
     }
+//    }
 
     if (typeof Bloom.output == 'function') {
       Bloom.output(response);

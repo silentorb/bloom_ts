@@ -9,7 +9,7 @@ var Edit_Arbor = Vineyard.Natural_Arbor.sub_class('Edit_Arbor', {
     var self = this;
     this.element.find('input[type=submit], button[type=submit], #submit').click(function (e) {
       e.preventDefault();
-      Seed.plant(self.seed, self.trellis, false, function(seed, response) {
+      Seed.plant(self.seed, self.trellis, false, function (seed, response) {
         var key = self.trellis.primary_key;
         self.seed[key] = response.objects[0][key];
         self.goto_destination(self.seed);
@@ -28,7 +28,9 @@ var Edit_Arbor = Vineyard.Natural_Arbor.sub_class('Edit_Arbor', {
         });
         dialog.options.title = 'Delete ' + Vine.pretty_name(self.seed.trellis.name);
         self.listen(dialog, 'yes', function () {
-          self.seed._delete();
+          self.seed._delete(false, function () {
+            self.garden.lightning(self.parent_url());
+          });
         });
         dialog.show();
       }
@@ -45,6 +47,9 @@ var Edit_Arbor = Vineyard.Natural_Arbor.sub_class('Edit_Arbor', {
     if (this.garden && destination) {
       this.garden.lightning(destination);
     }
+  },
+  parent_url: function () {
+    return Bloom.join(this.garden.app_path, this.trellis.name);
   }
 });
 
@@ -59,19 +64,24 @@ var Plot = Flower.sub_class('Plot', {
     if (!this.element || this.element.length == 0)
       this.element = $('<div />');
   },
-  get_arbor: function (trellis, action) {
+  get_arbor: function (trellis, action, child) {
     var name;
-    if (action) {
-      name = action + '.' + trellis.name;
-      if (this.arbors[name])
-        return this.arbors[name];
-      name = '*.' + trellis.name
-      if (this.arbors[name])
-        return this.arbors[name];
-      // 'create' defaults to 'edit'.
-      if (action == 'create') {
-        return this.get_arbor(trellis, 'edit');
-      }
+    action = action || 'view';
+
+    if (!child)
+      name = trellis.name + '.' + action;
+    else
+      name = trellis.name + '.' + child + '.' + action;
+
+    console.log('Arbor pattern: ' + name);
+    if (this.arbors[name])
+      return this.arbors[name];
+    name = '*.' + trellis.name
+    if (this.arbors[name])
+      return this.arbors[name];
+    // 'create' defaults to 'edit'.
+    if (action == 'create') {
+      return this.get_arbor(trellis, 'edit');
     }
 
     if (this.arbors[trellis.name])
@@ -89,7 +99,7 @@ var Plot = Flower.sub_class('Plot', {
       return this.element;
   },
   get_trellis: function (seed, request) {
-    if (seed.trellis)
+    if (seed && seed.trellis)
       return seed.trellis;
 
     return this.garden.vineyard.trellises[request.trellis];
@@ -99,13 +109,13 @@ var Plot = Flower.sub_class('Plot', {
     var trellis = this.garden.vineyard.trellises[request.trellis];
     var arbor_type = this.get_arbor(trellis, 'index');
     if (arbor_type) {
-      var query = '';
-      if (typeof(arbor_type.query) === 'function')
-        query = arbor_type.query(request);
+//      var query = '';
+//      if (typeof(arbor_type.query) === 'function')
+//        query = arbor_type.query(request);
 
-      this.garden.load_seeds(request.trellis, query, function (objects) {
-        self.place_arbor(arbor_type, objects, request);
-      });
+//      this.garden.load_seeds(request.trellis, query, function (objects) {
+      self.place_arbor(arbor_type, null, request);
+//      });
     }
   },
   place_arbor: function (arbor_type, seed, request) {
@@ -183,9 +193,6 @@ var Garden = Meta_Object.subclass('Garden', {
     if (this.block_path)
       Block.source_path = this.block_path;
 
-    this.listen(this, 'create', this.on_create);
-    this.listen(this, 'goto', this.goto_item);
-    this.listen(this, 'edit', this.goto_item);
     Bloom.output = this.print;
   },
   initialize_irrigation: function () {
@@ -249,6 +256,15 @@ var Garden = Meta_Object.subclass('Garden', {
   },
   get_plot_type: function (request) {
     return this.irrigation.get_plot(request.trellis);
+  },
+  goto_request_object: function (request) {
+    var self = this;
+    this.load_seed(request.trellis, request.id, request.parameters, function (seed) {
+      if (!seed)
+        return;
+
+      self.show_arbor(seed, request);
+    });
   },
   goto_item: function (target, args) {
     var trellis_name, id = null, arg_string, self = this;
@@ -427,6 +443,16 @@ var Garden = Meta_Object.subclass('Garden', {
     }
     else if (typeof action == 'string') {
       this.invoke(action, request);
+
+      if (action == 'create') {
+        this.on_create(request);
+      }
+      else if (action == 'edit' || action == 'goto') {
+        this.goto_request_object(request)
+      }
+      else if (request.id) {
+        this.goto_request_object( request)
+      }
     }
     else {
       throw new Error("Invalid action type.");
@@ -660,7 +686,7 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
         return request.action;
       }
       else if (request.id) {
-        return 'goto';
+        return 'view';
       }
       else {
         return 'index';
