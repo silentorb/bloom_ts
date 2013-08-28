@@ -1351,7 +1351,8 @@ Bloom.join = function () {
   return args.join('/');
 }
 
-Bloom.get = function (url, action, error, sync) {
+Bloom.get = function (url, action, error, wait_parent) {
+  var wait;
   if (Bloom.ajax_prefix) {
     url = Bloom.join(Bloom.ajax_prefix, url);
   }
@@ -1379,28 +1380,35 @@ Bloom.get = function (url, action, error, sync) {
     }
   };
 
-//  console.log('async', !sync);
-
   if (window.TESTING) {
     error = function (x, status, message) {
       throw new Error(status + ': ' + message + ' for ' + url);
     }
   }
-
-  jQuery.ajax({
+  var settings = {
     type: 'GET',
     url: url,
     success: success,
     error: error,
-    dataType: 'text',
-    async: !sync
-  });
+    dataType: 'text'
+  };
+  if (wait_parent && Bloom.Wait_Animation) {
+    wait = Bloom.Wait_Animation.create();
+    wait_parent.append(wait.element);
+    settings.complete = function () {
+      if (wait)
+        wait.element.remove();
+    }
+  }
+
+  jQuery.ajax(settings);
 };
 
 Bloom.output = function () {
 };
 
-Bloom.post = function (url, seed, success, error) {
+Bloom.post = function (url, seed, success, error, wait_parent) {
+  var wait;
   if (success === undefined) {
     success = seed;
     seed = null;
@@ -1421,13 +1429,28 @@ Bloom.post = function (url, seed, success, error) {
       Bloom.output(response);
     }
   };
-  jQuery.ajax({
+  var settings = {
     type: 'POST',
     url: url,
     data: seed,
     success: action,
-    error: error
-  });
+    error: error,
+    complete: function () {
+      if (wait)
+        wait.element.remove();
+    }
+  };
+
+  if (wait_parent && Bloom.Wait_Animation) {
+    wait = Bloom.Wait_Animation.create();
+    wait_parent.append(wait.element);
+    settings.complete = function () {
+      if (wait)
+        wait.element.remove();
+    }
+  }
+
+  jQuery.ajax(settings);
 }
 
 Bloom.post_json = function (url, seed, success, error) {
