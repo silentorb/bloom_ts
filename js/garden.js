@@ -53,6 +53,10 @@ var Edit_Arbor = Vineyard.Natural_Arbor.sub_class('Edit_Arbor', {
   }
 });
 
+var Not_Found_Arbor = Arbor.subclass('Not_Found_Arbor', {
+  block: 'not-found'
+});
+
 // The primary content area of the page.  A placeholder for arbors.
 // It's sort of like Arbors are the pages and Plot is the viewport.
 // However, the complicated nature of webpages means that sometimes
@@ -142,9 +146,9 @@ var Plot = Flower.sub_class('Plot', {
   },
   place_arbor_from_request: function (seed, request) {
     var trellis = this.get_trellis(seed, request);
-    var arbor = this.get_arbor(trellis, request.action);
-    arbor = arbor || this.default_arbor;
-    this.place_arbor(arbor, seed, request);
+    var arbor_type = this.get_arbor(trellis, request.action);
+    arbor_type = arbor_type || this.default_arbor;
+    this.place_arbor(arbor_type, seed, request);
   },
   refresh: function (old_seed, seed, element) {
     var content = this.get_content();
@@ -260,8 +264,10 @@ var Garden = Meta_Object.subclass('Garden', {
   goto_request_object: function (request) {
     var self = this;
     this.load_seed(request.trellis, request.id, request.parameters, function (seed) {
-      if (!seed)
+      if (!seed) {
+        self.not_found();
         return;
+      }
 
       self.show_arbor(seed, request);
     });
@@ -409,6 +415,12 @@ var Garden = Meta_Object.subclass('Garden', {
       }
       done(objects);
     });
+  },
+  not_found: function() {
+    var plot = this.get_plot(this.request);
+    if (plot) {
+    plot.place_arbor(Not_Found_Arbor, null, this.request);
+    }
   },
   on_create: function (request) {
     var self = this;

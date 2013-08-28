@@ -417,6 +417,9 @@ var Vineyard = (function () {
       item._deleted = true;
     }
     else {
+      if (seed._remove === true) {
+        item._remove = true;
+      }
       for (p in trellis.properties) {
 //        if (p == 'type')
 //          continue;
