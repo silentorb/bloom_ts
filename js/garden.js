@@ -130,7 +130,9 @@ var Plot = Flower.sub_class('Plot', {
     }
     var arbor = arbor_type.create(seed, trellis, view);
     arbor.garden = this.garden;
-    arbor.grow();
+    if (arbor.grow)
+      arbor.grow();
+
     if (this.arbor) {
       this.refresh(this.arbor.seed, seed, arbor.element);
     }
