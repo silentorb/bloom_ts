@@ -785,13 +785,14 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
     }
     else {
       var seed = trellis_or_seed;
-      if (!seed.trellis)
+      var trellis = (seed.trellis && seed.trellis.name) || seed.type;
+      if (!trellis)
         throw new Error('Invalid seed.');
 
-      trellis = seed.trellis.name;
       args = action;
       action = id;
-      id = seed[seed.trellis.primary_key];
+      if (seed.trellis && seed.trellis.primary_key)
+        id = seed[seed.trellis.primary_key];
     }
 
     // Allow hooks to override the arguments.
