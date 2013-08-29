@@ -1493,17 +1493,16 @@ Bloom.get_url_property = function (name) {
   return Bloom.get_url_properties()[name];
 }
 
-Bloom.get_url_properties = function () {
-  var result;
-//  if (window.result) {
-//    result = window.result;
-//  }
-//  else {
-  var items = window.location.search.slice(1).split(/[\&=]/);
+Bloom.get_url_properties = function (source) {
+  var result = {}, text;
+  text = source || window.location.search;
+  var items = text.slice(1).split(/[\&=]/);
   if (items.length < 2)
     return {};
 
-  result = window.result = {};
+  if (!source)
+    window.result = result;
+
   for (var x = 0; x < items.length; x += 2) {
     result[items[x]] = decodeURIComponent(items[x + 1].replace(/\+/g, ' '));
   }

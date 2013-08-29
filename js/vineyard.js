@@ -841,6 +841,9 @@ var Vineyard = (function () {
 
       return original_property;
     },
+    grow: function() {
+
+    },
     seed_to_element: function (seed) {
       if (!this.element)
         return;

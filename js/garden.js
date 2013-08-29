@@ -130,6 +130,7 @@ var Plot = Flower.sub_class('Plot', {
     }
     var arbor = arbor_type.create(seed, trellis, view);
     arbor.garden = this.garden;
+    arbor.grow();
     if (this.arbor) {
       this.refresh(this.arbor.seed, seed, arbor.element);
     }
@@ -193,6 +194,7 @@ var Garden = Meta_Object.subclass('Garden', {
       fertilizer: Block.load_library
     }
   },
+  distinct_arbor_pages: false, // Changing arbors requires full page load.
   initialize: function () {
     if (this.block_path)
       Block.source_path = this.block_path;
@@ -323,6 +325,7 @@ var Garden = Meta_Object.subclass('Garden', {
   },
   lightning: function (url, multiple, silent) {
     var args = Array.prototype.slice.call(arguments);
+    silent = args[args.length - 1];
     if (typeof url === 'object') {
       if (Object.prototype.toString.call(url) === '[object Array]') {
         url = Bloom.join(this.app_path, url.join('/'));
@@ -331,17 +334,22 @@ var Garden = Meta_Object.subclass('Garden', {
         url = this.irrigation.url.apply(this.irrigation, args);
       }
     }
-    if (args[args.length - 1] !== true) {
+    this.request = this.irrigation.get_request_from_string(url);
+    var plot_type = this.get_plot_type(this.request);
+    if (plot_type && this.plot && this.plot.meta_source.name != plot_type.name && this.distinct_arbor_pages) {
+      window.location = url;
+      return;
+    }
+    if (silent !== true) {
       history.pushState({
         name: 'garden',
         direction: Plot.direction
       }, '', url);
 
-      this.request = this.irrigation.get_request();
+//      this.request = this.irrigation.get_request();
     }
-    else {
-      this.request = this.irrigation.get_request_from_string(url);
-    }
+//    else {
+//    }
 
     this.clear_content();
     this.process_request(this.request);
@@ -805,9 +813,17 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
     return this.get_request_from_string(window.location.pathname);
   },
   get_request_from_string: function (path_string) {
-    var path = Irrigation.get_path_array(path_string, Bloom.join(this.app_path, this.page_path));
+    var args, path;
+    var query_index = path_string.indexOf('?');
+    if (query_index > -1) {
+      args = path_string.substring(query_index);
+      path_string = path_string.substring(0, query_index);
+    }
+
+    path = Irrigation.get_path_array(path_string, Bloom.join(this.app_path, this.page_path));
+
     var request = {
-      parameters: Bloom.get_url_properties(),
+      parameters: Bloom.get_url_properties(args),
       path: path
 //            trellis: path[0]
     };
