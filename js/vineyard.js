@@ -393,7 +393,8 @@ var Vineyard = (function () {
     var result, key = 'id';
 
     if (typeof seed != 'object')
-      throw new Error('Seed.prepare_for_planting() requires an object');
+      return seed;
+//      throw new Error('Seed.prepare_for_planting() requires an object');
 
     trellis = trellis || seed.trellis;
     if (!trellis)

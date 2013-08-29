@@ -125,7 +125,7 @@ var Plot = Flower.sub_class('Plot', {
   place_arbor: function (arbor_type, seed, request) {
     var view, trellis = this.get_trellis(seed, request);
     this.invoke('load.edit', seed, request, arbor_type);
-    if (request.action) {
+    if (request.action && trellis) {
       view = this.garden.vineyard.views[request.action + '.' + trellis.name];
     }
     var arbor = arbor_type.create(seed, trellis, view);
@@ -493,10 +493,15 @@ var Garden = Meta_Object.subclass('Garden', {
       self.invoke('live');
     });
   },
-  show_arbor: function (seed, request) {
+  show_arbor: function (seed, request, arbor) {
     var plot = this.get_plot(request);
     if (plot) {
-      plot.place_arbor_from_request(seed, request);
+      if (arbor) {
+        plot.place_arbor(arbor, seed, request);
+      }
+      else {
+        plot.place_arbor_from_request(seed, request);
+      }
     }
   }
 });
@@ -710,6 +715,9 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
 //                return this.late_channels[path];
 //            }
 //        }
+
+    if (request.action)
+      return request.action;
 
     return 'other';
   },
