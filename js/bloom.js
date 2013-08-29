@@ -1074,7 +1074,7 @@ var Bloom = (function () {
       var self = this;
       this.list = list;
       this.connect(list, 'list', 'pager');
-      this.listen(this, 'update', this.on_update);
+//      this.listen(this, 'update', list.on_update);
 
       this.prev = this.element.find('.prev');
       this.prev.click(function () {
