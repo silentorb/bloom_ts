@@ -336,7 +336,7 @@ var Garden = Meta_Object.subclass('Garden', {
         url = this.irrigation.url.apply(this.irrigation, args);
       }
     }
-    this.request = this.irrigation.get_request_from_string(url);
+    this.request = this.irrigation.get_request_from_string(url, true);
     var plot_type = this.get_plot_type(this.request);
     if (plot_type && this.plot && this.plot.meta_source.name != plot_type.name && this.distinct_arbor_pages) {
       window.location = url;
@@ -815,9 +815,12 @@ var Irrigation = Meta_Object.subclass('Irrigation', {
   get_request: function () {
     return this.get_request_from_string(window.location.pathname);
   },
-  get_request_from_string: function (path_string) {
+  get_request_from_string: function (path_string, ignore_browser_args) {
     var args, path;
     var query_index = path_string.indexOf('?');
+    if (ignore_browser_args)
+      args = '';
+
     if (query_index > -1) {
       args = path_string.substring(query_index);
       path_string = path_string.substring(0, query_index);

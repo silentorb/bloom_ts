@@ -1144,6 +1144,7 @@ var Bloom = (function () {
 
       // If you don't provide a link_element, this simply acts as a limiter
       if (link_element) {
+        link_element.hide();
         this.link = link_element;
         link_element.click(function (e) {
           e.preventDefault();
@@ -1153,6 +1154,8 @@ var Bloom = (function () {
         this.listen(list, 'update', function (seed, response) {
           if (list.seed.length >= response.total)
             link_element.remove();
+          else
+            link_element.show();
         });
       }
     },
@@ -1495,7 +1498,11 @@ Bloom.get_url_property = function (name) {
 
 Bloom.get_url_properties = function (source) {
   var result = {}, text;
-  text = source || window.location.search;
+  if (source !== undefined)
+    text = source
+  else
+    text = window.location.search;
+
   var items = text.slice(1).split(/[\&=]/);
   if (items.length < 2)
     return {};
