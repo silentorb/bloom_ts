@@ -135,12 +135,17 @@ var Vineyard = (function () {
           if (seed)
             return seed;
         }
-        else if (source.id) {
-          var seed = this.get_seed_by_id(source.id);
-          if (seed) {
-            this.populate_seed(seed, source);
+        else {
+          if (source.meta_source == Seed)
+            return source;
 
-            return seed;
+          if (source.id) {
+            var seed = this.get_seed_by_id(source.id);
+            if (seed) {
+              this.populate_seed(seed, source);
+
+              return seed;
+            }
           }
         }
       }
@@ -304,7 +309,9 @@ var Vineyard = (function () {
         };
 
       //MetaHub.extend(this, source);
-      this.trellis = trellis;
+      if (!this.trellis)
+        this.trellis = trellis;
+
       this.value = Meta_Object.value;
       this.listen(this, 'connect.child', this._on_child_connect);
     },
@@ -350,6 +357,7 @@ var Vineyard = (function () {
       if (seeds[i]._is_proxy)
         throw new Error("Cannot plant proxy seeds.");
 
+      trellis.invoke('plant', seeds[i]);
       data.objects.push(Seed.prepare_for_planting(seeds[i], trellis));
     }
 
@@ -396,7 +404,7 @@ var Vineyard = (function () {
       return seed;
 //      throw new Error('Seed.prepare_for_planting() requires an object');
 
-    trellis = trellis || seed.trellis;
+    trellis = seed.trellis || trellis;
     if (!trellis)
       throw new Error('Missing trellis.');
 
@@ -841,7 +849,7 @@ var Vineyard = (function () {
 
       return original_property;
     },
-    grow: function() {
+    grow: function () {
 
     },
     seed_to_element: function (seed) {
