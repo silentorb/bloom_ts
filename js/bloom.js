@@ -1152,7 +1152,8 @@ var Bloom = (function () {
         });
 
         this.listen(list, 'update', function (seed, response) {
-          if (list.seed.length >= response.total)
+          var total = response.total || 0;
+          if (list.seed.length >= total)
             link_element.remove();
           else
             link_element.show();
