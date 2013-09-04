@@ -295,6 +295,11 @@ var Vineyard = (function () {
           }
         }
       }
+
+      for (var k in source) {
+        if (!this.properties[k])
+          seed[k] = source[k];
+      }
     }
   });
 
