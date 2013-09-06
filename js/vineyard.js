@@ -430,43 +430,41 @@ var Vineyard = (function () {
       item[primary_key] = seed[primary_key];
       item._deleted = true;
     }
-    else {
-      if (seed._remove === true) {
-        item._remove = true;
-      }
-      for (p in trellis.properties) {
-//        if (p == 'type')
-//          continue;
+    if (seed._remove === true) {
+      item._remove = true;
+    }
+    for (p in trellis.properties) {
+      property = trellis.properties[p];
 
-        property = trellis.properties[p];
+      if (item._deleted && property.name[0] !== '_')
+        continue;
 
-        if (p != primary_key && (property.private || property.readonly))
-          continue;
+      if (p != primary_key && (property.private || property.readonly))
+        continue;
 
-        name = property.name;
-        type = property.type;
-        var value = seed[name];
+      name = property.name;
+      type = property.type;
+      var value = seed[name];
 
-        if (value !== undefined) {
-          if (type == 'list') {
-            item[name] = value.map(function (x) {
-              return Seed.prepare_for_planting(x, property.target_trellis, bag)
+      if (value !== undefined) {
+        if (type == 'list') {
+          item[name] = value.map(function (x) {
+            return Seed.prepare_for_planting(x, property.target_trellis, bag)
+          });
+
+          if (value._deleted && value._deleted.length > 0) {
+            item[name + '_deleted'] = value._deleted.map(function (x) {
+              return x.id;
             });
-
-            if (value._deleted && value._deleted.length > 0) {
-              item[name + '_deleted'] = value._deleted.map(function (x) {
-                return x.id;
-              });
-            }
           }
-          else if (type == 'reference' && typeof value === 'object') {
-            value = Seed.prepare_for_planting(value, property.target_trellis, bag);
-            if (value !== undefined)
-              item[name] = value;
-          }
-          else {
+        }
+        else if (type == 'reference' && typeof value === 'object') {
+          value = Seed.prepare_for_planting(value, property.target_trellis, bag);
+          if (value !== undefined)
             item[name] = value;
-          }
+        }
+        else {
+          item[name] = value;
         }
       }
     }
