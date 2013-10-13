@@ -4,8 +4,7 @@
  * Date: 9/18/13
  */
 
- module MetaHub {
-
+module MetaHub {
   export function remove(array, item) {
     // Make sure someone isn't using 'in' to loop through an array
     if (typeof array.indexOf != 'function')
@@ -58,7 +57,7 @@
   }
 
 
-  export function extend(destination, source, names = null) {
+  export function extend(destination, source, names:string[] = null) {
     var info;
 
     if (typeof source == 'object' || typeof source == 'function') {
@@ -251,9 +250,6 @@
       }
     }
 
-//       toString () {
-//        return this.meta_source + ":" + this.guid;
-//      };
     listen(other:Meta_Object, name:string, method:(...args:any[])=>any, options = null) {
       if (typeof method !== 'function')
         throw new Error('Meta_Object.listen requires the passed method to be a function, not a "' + typeof method + '"');
@@ -273,19 +269,19 @@
         async: false
       }
 
-      if (typeof options == 'object') {
-        if (options.once) {
-          event.method = function () {
-            MetaHub.remove(other.events[name], event);
-            method.apply(this, Array.prototype.slice.call(arguments));
-          }
-        }
-        if (options.async) {
-          event.async = true;
-        }
-      }
+//      if (typeof options == 'object') {
+//        if (options.once) {
+//          event.method = function () {
+//            MetaHub.remove(other.events[name], event);
+//            method.apply(this, Array.prototype.slice.call(arguments));
+//          }
+//        }
+//        if (options.async) {
+//          event.async = true;
+//        }
+//      }
 
-      if (options && options.first)
+      if (options)
         other.events[name].unshift(event);
       else
         other.events[name].push(event);
@@ -426,7 +422,7 @@
     // and performance cost.
     get_connections(...filters:any[]) {
       var x;
-      var first_filter = filters.shift();
+      var first_filter:any = filters.shift();
 
       var result = [];
       if (typeof first_filter == 'string') {
@@ -516,4 +512,4 @@
   }
 }
 
-module.exports = MetaHub
+export = MetaHub

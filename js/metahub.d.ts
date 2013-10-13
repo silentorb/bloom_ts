@@ -1,8 +1,3 @@
-/**
-* Created with JetBrains PhpStorm.
-* User: Chris Johnson
-* Date: 9/18/13
-*/
 declare module MetaHub {
     function remove(array, item): void;
     function has_properties(obj): boolean;
@@ -11,7 +6,7 @@ declare module MetaHub {
     function S4(): string;
     function values(source): any[];
     function concat(destination, source): {};
-    function extend(destination, source, names?);
+    function extend(destination, source, names?: string[]);
     function guid(): string;
     function clone(source, names): {};
     function get_connection(a, b);
@@ -48,3 +43,4 @@ declare module MetaHub {
         constructor(parent, other, type);
     }
 }
+export = MetaHub;
