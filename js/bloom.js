@@ -1,65 +1,13 @@
-/**
-* Created with JetBrains PhpStorm.
-* User: cj
-* Date: 10/9/13
-* Time: 11:48 PM
-* To change this template use File | Settings | File Templates.
-*/
 var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
     __.prototype = b.prototype;
     d.prototype = new __();
 };
-define(["require", "exports", 'metahub'], function(require, exports, __MetaHub__) {
-    /// <reference path="../defs/jquery.d.ts" />
-    /// <reference path="metahub.ts" />
+define(["require", "exports", 'metahub', 'handlebars'], function(require, exports, __MetaHub__, __Handlebars__) {
     var MetaHub = __MetaHub__;
 
-    var Bloom = (function () {
-        function Bloom() {
-        }
-        Bloom.join = function () {
-            var args = [];
-            for (var _i = 0; _i < (arguments.length - 0); _i++) {
-                args[_i] = arguments[_i + 0];
-            }
-            var i, args = [];
-            for (i = 0; i < args; ++i) {
-                var x = args[i];
-                if (typeof x === 'number')
-                    x = x.toString();
-else if (typeof x !== 'string' || x.length === 0)
-                    continue;
-
-                if (args.length > 0 && x[0] == '/') {
-                    x = x.substring(1);
-                }
-
-                if (x.length === 0)
-                    continue;
-
-                args.push(x);
-            }
-
-            if (args.length === 0)
-                return '';
-
-            for (i = 0; i < args.length - 1; ++i) {
-                var x = args[i];
-                if (x[x.length - 1] == '/') {
-                    args[i] = x.substring(0, x.length - 1);
-                }
-            }
-
-            if (args.length > 1 && args[args.length - 1][0] == '?') {
-                args[args.length - 2] += args.pop();
-            }
-
-            return args.join('/');
-        };
-        return Bloom;
-    })();
+    var Handlebars = __Handlebars__;
 
     var Bloom;
     (function (Bloom) {
@@ -67,147 +15,13 @@ else if (typeof x !== 'string' || x.length === 0)
         Bloom.ajax_prefix;
         Bloom.Wait_Animation;
 
-        var Block = (function () {
-            function Block(name, html) {
-                if (typeof html === "undefined") { html = ''; }
-                this.name = name;
-                Block.library[name] = this;
-                if (html != null)
-                    this.html = html;
-else
-                    this.html = '';
-            }
-            Block.load = function (name, onload) {
-                //      var block = Block.library[name];
-                //
-                //      if (!block) {
-                //        block = new Block(name);
-                //        block.queue = [];
-                //        var url = name + Block.default_extension
-                //        if (Block.source_path.length > 0)
-                //          url = Block.source_path + "/" + url;
-                //
-                //        jQuery.ajax({
-                //          url: url,
-                //          success: function (seed) {
-                //            block.html = seed;
-                //            for (var x = 0; x < block.queue.length; x++) {
-                //              block.queue[x](block);
-                //            }
-                //            delete block.queue;
-                //            Mulch.till('block', name);
-                //          }, error: function (jqXHR, text, error) {
-                //            var message = 'Could not load ' + name + Block.default_extension + '.';
-                //            delete Block.library[name];
-                //            console.log(message);
-                //            Mulch.till('block', name);
-                //          }
-                //        });
-                //
-                //        if (typeof onload == 'function') {
-                //          block.queue.push(onload);
-                //        }
-                //      }
-                //      else if (typeof onload == 'function') {
-                //        if (block.html == '') {
-                //          block.queue.push(onload);
-                //        }
-                //        else {
-                //          onload(block);
-                //          return;
-                //        }
-                //      }
-            };
-
-            Block.load_library = function (name, onload) {
-                //      var url = name + Block.default_extension
-                //      if (Block.source_path.length > 0)
-                //        url = Block.source_path + "/" + url;
-                //      jQuery.ajax({
-                //        url: url,
-                //        success: function (seed) {
-                //          Block.load_library_from_string(seed);
-                //          Mulch.till('blocks', name);
-                //        },
-                //        error: function (jqXHR, text, error) {
-                //          var message = 'Could not load ' + name + Block.default_extension + '.';
-                //          if (Block.use_alert) {
-                //            alert(message);
-                //          }
-                //          console.log(message);
-                //          Mulch.till('block', name);
-                //        }
-                //      });
-                //
-                //      if (typeof onload == 'function') {
-                //        block.queue.push(onload);
-                //      }
-            };
-
-            Block.load_library_from_string = function (text) {
-                var data = $(text);
-                data.children().each(function () {
-                    var child = $(this);
-                    var id = child.attr('name');
-                    if (id)
-                        child.removeAttr('name');
-else
-                        id = child.attr('id');
-
-                    if (id) {
-                        new Block(id, this.outerHTML);
-                    } else {
-                        console.log('Block was missing name or id attribute');
-                    }
-                });
-            };
-
-            Block.render = function (name, seed) {
-                return Block.library[name].render(seed);
-            };
-
-            Block.prototype.render = function (control) {
-                var output = this.html;
-
-                output = output.replace(/@{([\W\w]*?)}(?=\s*(?:<|"))/gm, function (all, code) {
-                    var result = eval(code);
-                    if (typeof result === "undefined" || result == null)
-                        return '';
-
-                    return result;
-                });
-
-                var result = $(output);
-                return result;
-            };
-            Block.library = {};
-            Block.default_extension = '.html';
-            Block.source_path = "";
-            return Block;
-        })();
-        Bloom.Block = Block;
-
         var Flower = (function (_super) {
             __extends(Flower, _super);
-            function Flower(seed, element, block) {
+            function Flower(seed, element) {
                 _super.call(this);
-                this.override_parameters = false;
-                this.autobind = true;
-                // Returns a url string to the service from which this object receives its data.
-                //    query: function() {},
-                // Name of the property of the query response that contains the actual object data.
                 this.seed_name = 'seed';
                 this.seed = seed;
                 this.element = element;
-                this.block = block || this.block;
-
-                if (!this.element && this.block) {
-                    // Don't pass onload to render() because if one was provided to create(), it will
-                    // be handled later.
-                    this.render();
-                } else if (this.autobind) {
-                    this.source_to_element();
-                }
 
                 this.listen(this, 'disconnect-all', function () {
                     if (this.element) {
@@ -215,23 +29,10 @@ else
                         this.element = null;
                     }
                 });
+
+                this.initialize();
             }
-            Flower.prototype.render = function (onload) {
-                if (typeof onload === "undefined") { onload = null; }
-                var block = Block.library[this.block];
-                if (!block)
-                    throw new Error("Block '" + this.block + "' not found.");
-
-                this.element = block.render(this);
-                if (this.element.length == 0) {
-                    throw new Error('this.element is empty!');
-                }
-                if (this.autobind)
-                    this.source_to_element();
-
-                if (typeof onload == 'function')
-                    onload(this);
-                //});
+            Flower.prototype.initialize = function () {
             };
 
             Flower.prototype.append = function (flower) {
@@ -246,14 +47,86 @@ else
                 });
             };
 
-            Flower.prototype.get_data = function () {
-                var args = Array.prototype.slice.call(arguments);
-                var method = args.pop();
-                jQuery.get(args, function () {
-                    var args = Array.prototype.slice.call(arguments);
-                    args.push('json');
-                    method.apply(this, args);
+            Flower.load_blocks_from_string = function (text) {
+                var data = $(text);
+                var blocks = Flower.blocks;
+                data.children().each(function () {
+                    var child = $(this);
+                    var id = child.attr('name') || child[0].tagName.toLowerCase();
+                    if (id) {
+                        if (blocks[id])
+                            console.log('Duplicate block tag name: ' + id + '.');
+
+                        blocks[id] = Handlebars.compile(this.outerHTML);
+                    } else {
+                        console.log('Error with block tag name');
+                    }
                 });
+            };
+
+            Flower.find_flower = function (path) {
+                var tokens = path.split('.');
+                var result = Flower.namespace;
+                for (var i = 0; i < tokens.length; ++i) {
+                    var token = tokens[i];
+                    result = result[token];
+                    if (!result)
+                        throw new Error('Invalid namespace path: ' + path);
+                }
+
+                return result;
+            };
+
+            Flower.prototype.grow = function () {
+            };
+
+            Flower.render_block = function (name, seed) {
+                if (!Flower.blocks[name])
+                    throw new Error('Could not find any flower block named: ' + name);
+
+                var template = Flower.blocks[name];
+                var source = template(seed);
+
+                return $(source);
+            };
+
+            Flower.grow = function (element, seed) {
+                var block, original = element, flower;
+
+                var tagname = element[0].tagName.toLowerCase();
+                if (Flower.blocks[tagname]) {
+                    block = Flower.render_block(tagname, seed);
+                    element.replaceWith(block);
+                    element = block;
+                }
+
+                if (element.attr('flower')) {
+                    var flower_type = Flower.find_flower(element.attr('flower'));
+                    if (flower_type) {
+                        flower = new flower_type(seed, element);
+                    }
+                }
+
+                element.children().each(function (i, node) {
+                    var child = $(node);
+                    var bind = child.attr('bind');
+                    var child_seed;
+                    if (bind && seed[bind])
+                        child_seed = seed[bind];
+else
+                        child_seed = seed;
+
+                    var child = Flower.grow(child, child_seed);
+                    if (block) {
+                        child.detach();
+                        element.append(child);
+                    }
+                });
+
+                if (flower)
+                    flower.grow();
+
+                return element;
             };
 
             Flower.prototype.plant = function (url) {
@@ -269,81 +142,9 @@ else
                 });
             };
 
-            Flower.prototype.click = function (action, meta_object) {
-                if (!meta_object) {
-                    meta_object = this;
-                }
-                this.element.click(function (event) {
-                    event.preventDefault();
-                    action.call(meta_object, event);
-                });
-            };
-
-            Flower.prototype.source_to_element = function () {
-                if (!this.element)
-                    return;
-
-                var value;
-                var self = this;
-
-                this.element.find('*[bind]').each(function () {
-                    var element = $(this);
-                    var bind = element.attr('bind');
-                    if (self.hasOwnProperty(bind)) {
-                        if (typeof self[bind] == 'function') {
-                            value = self[bind].apply(self);
-                        } else {
-                            value = self[bind];
-                        }
-                        Flower.set_value(element, value);
-                    }
-                });
-
-                if (!this.seed)
-                    return;
-
-                for (var name in this.seed) {
-                    var element = this.element.find('#' + name + ', .' + name + ', [bind=' + name + '], [name=' + name + ']');
-                    if (element.length > 0) {
-                        var property = this.seed[name];
-                        if (typeof property == 'function') {
-                            value = property.apply(this.seed);
-                        } else {
-                            value = property;
-                        }
-
-                        if (typeof value != 'object') {
-                            Flower.set_value(element, value);
-                        }
-                    }
-                }
-            };
-
-            Flower.prototype.element_to_source = function () {
-                for (var name in this.seed) {
-                    var element = this.element.find('#' + name + ':input, .' + name + ':input, [bind=' + name + ']:input');
-                    if (element.length > 1) {
-                        throw new Error('Too many selectors for property: ' + name + '.');
-                    } else if (element.length == 1) {
-                        if (typeof this.seed[name] != 'function' && Flower.is_input(element)) {
-                            this.seed[name] = element.val();
-                        }
-                    }
-                }
-            };
-
             Flower.prototype.empty = function () {
                 this.disconnect_all('child');
                 this.element.empty();
-            };
-
-            Flower.prototype.graft_old = function (selector, other) {
-                var element = this.element.find(selector);
-                this.listen(other, 'change', function (value) {
-                    Flower.set_value(element, value);
-                });
-
-                Flower.set_value(element, other.value);
             };
 
             Flower.prototype.graft = function (other, property, selector) {
@@ -435,37 +236,47 @@ else
                 var name = element[0].nodeName.toLowerCase();
                 return name == 'input' || name == 'select' || name == 'textarea';
             };
+            Flower.blocks = {};
             return Flower;
         })(MetaHub.Meta_Object);
         Bloom.Flower = Flower;
 
-        new Block('list', '<ul></ul>');
-
         var List = (function (_super) {
             __extends(List, _super);
-            function List(seed, element, block) {
-                _super.call(this, seed, element, block);
-                // List did not used to define a default block because blocks used to override
-                // existing jQuery elements/selectors passed to the constructer.  Now that that
-                // is not the case it is safe to have this default.
-                this.block = 'list';
+            function List(seed, element) {
+                _super.call(this, seed, element);
                 this.item_type = null;
+                this.item_block = null;
                 this.pager = null;
                 this.empty_on_update = true;
                 this.optimize_getter('children', 'child');
                 this.listen(this, 'update', this.on_update);
                 this.listen(this, 'connect.child', this.child_connected);
                 this.listen(this, 'disconnect.child', this.remove_element);
+                this.item_type = element.attr('item_type') || this.item_type;
+                this.item_block = element.attr('item_block');
+            }
+            List.prototype.grow = function () {
                 if (typeof this.seed == 'object') {
                     if (this.seed.is_meta_object)
                         this.watch_seed(this.seed);
 else
                         this.populate(this.seed);
                 }
-            }
-            List.prototype.add_seed_child = function (seed_item) {
-                var flower;
-                flower = new this.item_type(seed_item);
+            };
+
+            List.prototype.add_seed_child = function (seed) {
+                var flower, element, item_type = this.item_type;
+                if (this.item_block) {
+                    var block = Flower.render_block(this.item_block, seed);
+                    element = Flower.grow(block, seed);
+                    if (element.attr('flower')) {
+                        var flower_type = Flower.find_flower(element.attr('flower'));
+                        if (flower_type)
+                            item_type = flower_type;
+                    }
+                }
+                flower = new item_type(seed, element);
                 this.connect(flower, 'child', 'parent');
                 return flower;
             };
@@ -482,11 +293,6 @@ else
                 if (this.selection) {
                     List.make_item_selectable(this, flower, this.selection);
                 }
-            };
-
-            List.prototype.process_connect = function (other, type, other_type) {
-                if (type == 'child' && this.contains_flower(other))
-                    return false;
             };
 
             List.prototype.on_update = function (seed) {
@@ -506,20 +312,6 @@ else
                 this.load(seed);
             };
 
-            List.prototype.contains_flower = function (flower) {
-                return this.element.has(flower.element[0]).length > 0;
-            };
-
-            //    make_selectable(selection) {
-            //      if (selection == undefined)
-            //        this.selection = Meta_Object.create();
-            //      else
-            //        this.selection = selection;
-            //
-            //      for (var x = 0; x < this.children.length; x++) {
-            //        List.make_item_selectable(this, this.children[x], selection);
-            //      }
-            //    }
             List.prototype.load = function (seed) {
                 seed = seed || this.seed;
                 this.populate(seed);
@@ -626,9 +418,6 @@ else
             if (typeof wait_parent === "undefined") { wait_parent = null; }
             var wait;
 
-            //    if (Bloom.ajax_prefix) {
-            //      url = Bloom.join(Bloom.ajax_prefix, url);
-            //    }
             var success = function (response) {
                 try  {
                     var json = JSON.parse(response);
@@ -774,7 +563,6 @@ else
                 result[items[x]] = decodeURIComponent(items[x + 1].replace(/\+/g, ' '));
             }
 
-            //  }
             return result;
         }
         Bloom.get_url_properties = get_url_properties;
@@ -840,8 +628,6 @@ else
                 timer = setTimeout(finished, delay);
             });
 
-            // Chrome (possibly all of webkit?) doesn't fire keypress
-            // on backspace, but it does fire keyup
             input.keyup(function (event) {
                 if (event.keyCode == 8) {
                     if (timer) {
@@ -887,6 +673,44 @@ else
             return query;
         }
         Bloom.render_query = render_query;
+
+        function join() {
+            var args = [];
+            for (var _i = 0; _i < (arguments.length - 0); _i++) {
+                args[_i] = arguments[_i + 0];
+            }
+            var i, tokens = [];
+            for (i = 0; i < args.length; ++i) {
+                var x = args[i];
+                if (typeof x === 'number')
+                    x = x.toString();
+else if (typeof x !== 'string' || x.length === 0)
+                    continue;
+
+                x = x.replace(/^\/*/, '');
+                x = x.replace(/\/*$/, '');
+
+                if (x.length === 0)
+                    continue;
+
+                tokens.push(x);
+            }
+
+            if (tokens.length === 0)
+                return '';
+
+            if (tokens.length > 1 && tokens[tokens.length - 1][0] == '?') {
+                tokens[tokens.length - 2] += tokens.pop();
+            }
+
+            var result = tokens.join('/');
+
+            if (args[0][0] == '/')
+                result = '/' + result;
+
+            return result;
+        }
+        Bloom.join = join;
     })(Bloom || (Bloom = {}));
 
     

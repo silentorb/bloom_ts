@@ -1,206 +1,35 @@
 /**
  * Created with JetBrains PhpStorm.
- * User: cj
+ * Author: Christopher W. Johnson
  * Date: 10/9/13
- * Time: 11:48 PM
- * To change this template use File | Settings | File Templates.
  */
 
 /// <reference path="../defs/jquery.d.ts" />
-/// <reference path="metahub.ts" />
-import MetaHub = require('metahub')
+/// <reference path="../defs/metahub.d.ts" />
+/// <reference path="../defs/handlebars.d.ts" />
 
-class Bloom {
+import MetaHub = require
+('metahub')
 
-  static join(...args:any[]) {
-    var i, args = [];
-    for (i = 0; i < args; ++i) {
-      var x = args[i];
-      if (typeof x === 'number')
-        x = x.toString();
-      else if (typeof x !== 'string' || x.length === 0)
-        continue;
-
-      if (args.length > 0 && x[0] == '/') {
-        x = x.substring(1);
-      }
-
-      if (x.length === 0)
-        continue;
-
-      args.push(x);
-    }
-
-    if (args.length === 0)
-      return '';
-
-    for (i = 0; i < args.length - 1; ++i) {
-      var x = args[i];
-      if (x[x.length - 1] == '/') {
-        args[i] = x.substring(0, x.length - 1);
-      }
-    }
-
-    // Ensure that arguments don't have a slash in front of them.
-    // Not essential but leads to cleaner output.
-    if (args.length > 1 && args[args.length - 1][0] == '?') {
-      args[args.length - 2] += args.pop();
-    }
-
-    return args.join('/');
-  }
-}
+import Handlebars = require
+('handlebars')
 
 module Bloom {
   export var output = null
   export var ajax_prefix:string
   export var Wait_Animation
 
-  export class Block {
-    name:string;
-    html:string;
-    static library = {};
-    static default_extension = '.html';
-    static source_path = "";
-
-    constructor(name:string, html:string = '') {
-      this.name = name;
-      Block.library[name] = this;
-      if (html != null)
-        this.html = html;
-      else
-        this.html = '';
-    }
-
-    static load(name, onload) {
-//      var block = Block.library[name];
-//
-//      if (!block) {
-//        block = new Block(name);
-//        block.queue = [];
-//        var url = name + Block.default_extension
-//        if (Block.source_path.length > 0)
-//          url = Block.source_path + "/" + url;
-//
-//        jQuery.ajax({
-//          url: url,
-//          success: function (seed) {
-//            block.html = seed;
-//            for (var x = 0; x < block.queue.length; x++) {
-//              block.queue[x](block);
-//            }
-//            delete block.queue;
-//            Mulch.till('block', name);
-//          }, error: function (jqXHR, text, error) {
-//            var message = 'Could not load ' + name + Block.default_extension + '.';
-//            delete Block.library[name];
-//            console.log(message);
-//            Mulch.till('block', name);
-//          }
-//        });
-//
-//        if (typeof onload == 'function') {
-//          block.queue.push(onload);
-//        }
-//      }
-//      else if (typeof onload == 'function') {
-//        if (block.html == '') {
-//          block.queue.push(onload);
-//        }
-//        else {
-//          onload(block);
-//          return;
-//        }
-//      }
-    }
-
-    static load_library(name, onload) {
-//      var url = name + Block.default_extension
-//      if (Block.source_path.length > 0)
-//        url = Block.source_path + "/" + url;
-//      jQuery.ajax({
-//        url: url,
-//        success: function (seed) {
-//          Block.load_library_from_string(seed);
-//          Mulch.till('blocks', name);
-//        },
-//        error: function (jqXHR, text, error) {
-//          var message = 'Could not load ' + name + Block.default_extension + '.';
-//          if (Block.use_alert) {
-//            alert(message);
-//          }
-//          console.log(message);
-//          Mulch.till('block', name);
-//        }
-//      });
-//
-//      if (typeof onload == 'function') {
-//        block.queue.push(onload);
-//      }
-    }
-
-    static load_library_from_string(text) {
-      var data = $(text);
-      data.children().each(function () {
-        var child = $(this);
-        var id = child.attr('name');
-        if (id)
-          child.removeAttr('name')
-        else
-          id = child.attr('id');
-
-        if (id) {
-          new Block(id, this.outerHTML);
-        }
-        else {
-          console.log('Block was missing name or id attribute');
-        }
-      });
-    }
-
-    static render(name, seed) {
-      return Block.library[name].render(seed);
-    }
-
-
-    render(control) {
-      var output = this.html;
-
-      output = output.replace(/@{([\W\w]*?)}(?=\s*(?:<|"))/gm, function (all, code) {
-        var result = eval(code);
-        if (typeof result === "undefined" || result == null)
-          return '';
-
-        return result;
-      });
-
-      var result = $(output);
-      return result;
-    }
-  }
-
   export class Flower extends MetaHub.Meta_Object {
-    override_parameters:boolean = false;
-    autobind:boolean = true;
     element:JQuery;
     seed;
-    block;
     query;
+    static blocks = {}
+    static namespace
 
-    constructor(seed, element:JQuery, block) {
+    constructor(seed, element:JQuery) {
       super()
       this.seed = seed
       this.element = element
-      this.block = block || this.block
-
-      if (!this.element && this.block) {
-        // Don't pass onload to render() because if one was provided to create(), it will
-        // be handled later.
-        this.render()
-      }
-      else if (this.autobind) {
-        this.source_to_element();
-      }
 
       this.listen(this, 'disconnect-all', function () {
         if (this.element) {
@@ -208,23 +37,11 @@ module Bloom {
           this.element = null;
         }
       });
+
+      this.initialize()
     }
 
-    render(onload = null) {
-      var block = Block.library[this.block];
-      if (!block)
-        throw new Error("Block '" + this.block + "' not found.");
-
-      this.element = block.render(this);
-      if (this.element.length == 0) {
-        throw new Error('this.element is empty!');
-      }
-      if (this.autobind)
-        this.source_to_element();
-
-      if (typeof onload == 'function')
-        onload(this);
-      //});
+    initialize() {
     }
 
     append(flower) {
@@ -239,14 +56,109 @@ module Bloom {
       })
     }
 
-    get_data() {
-      var args = Array.prototype.slice.call(arguments);
-      var method = args.pop();
-      jQuery.get(args, function () {
-        var args = Array.prototype.slice.call(arguments);
-        args.push('json');
-        method.apply(this, args);
-      });
+//    get_data() {
+//      var args = Array.prototype.slice.call(arguments);
+//      var method = args.pop();
+//      jQuery.get(args, function () {
+//        var args = Array.prototype.slice.call(arguments);
+//        args.push('json');
+//        method.apply(this, args);
+//      });
+//    }
+    static load_blocks_from_string(text:string) {
+      var data = $(text)
+      var blocks = Flower.blocks
+      data.children().each(function () {
+        var child = $(this)
+        var id = child.attr('name') || child[0].tagName.toLowerCase()
+        if (id) {
+          if (blocks[id])
+            console.log('Duplicate block tag name: ' + id + '.')
+
+          blocks[id] = Handlebars.compile(this.outerHTML)
+        }
+        else {
+          console.log('Error with block tag name');
+        }
+      })
+    }
+
+    static find_flower(path) {
+      var tokens = path.split('.')
+      var result = Flower.namespace
+      for (var i = 0; i < tokens.length; ++i) {
+        var token = tokens[i]
+        result = result[token]
+        if (!result)
+          throw new Error('Invalid namespace path: ' + path)
+      }
+
+      return result
+    }
+
+    grow() {
+
+    }
+
+    static render_block(name, seed) {
+      if (!Flower.blocks[name])
+        throw new Error('Could not find any flower block named: ' + name)
+
+      var template = Flower.blocks[name]
+      var source = template(seed)
+//      source = source.replace(/{{([\w\-]+)}}/g, function(match, token) {
+//        if (!seed)
+//          throw new Error('Cannot populate block "' + name + '" with an empty seed.')
+//
+//        if (seed[token] === undefined)
+//          throw new Error('Cannot populate block "' + name + '".  Seed does not have property: ' + token + '.')
+//
+//        return seed[token]
+//      })
+
+      return $(source)
+    }
+
+    static grow(element:JQuery, seed):JQuery {
+      var block:JQuery, original = element, flower:Flower
+
+      // Expand blocks
+      var tagname = element[0].tagName.toLowerCase()
+      if (Flower.blocks[tagname]) {
+        block = Flower.render_block(tagname, seed)
+        element.replaceWith(block)
+        element = block
+      }
+
+      // Associate code-behind
+      if (element.attr('flower')) {
+        var flower_type:any = Flower.find_flower(element.attr('flower'))
+        if (flower_type) {
+          flower = <Flower>new flower_type(seed, element)
+        }
+      }
+
+      // Cycle through children
+      element.children().each((i, node)=> {
+        var child = $(node)
+        var bind = child.attr('bind')
+        var child_seed
+        if (bind && seed[bind])
+          child_seed = seed[bind]
+        else
+          child_seed = seed
+
+        var child = Flower.grow(child, child_seed)
+        if (block) {
+          child.detach()
+          element.append(child)
+        }
+      })
+
+      if (flower)
+        flower.grow()
+
+      return element
     }
 
     plant(url) {
@@ -263,84 +175,65 @@ module Bloom {
       });
     }
 
-    click(action, meta_object) {
-      if (!meta_object) {
-        meta_object = this;
-      }
-      this.element.click(function (event) {
-        event.preventDefault();
-        action.call(meta_object, event);
-      });
-    }
-
-    source_to_element() {
-      if (!this.element)
-        return;
-
-      var value;
-      var self = this;
-
-      this.element.find('*[bind]').each(function () {
-        var element = $(this);
-        var bind = element.attr('bind');
-        if (self.hasOwnProperty(bind)) {
-          if (typeof self[bind] == 'function') {
-            value = self[bind].apply(self);
-          }
-          else {
-            value = self[bind];
-          }
-          Flower.set_value(element, value);
-        }
-      });
-
-      if (!this.seed)
-        return;
-
-      for (var name in this.seed) {
-        var element = this.element.find('#' + name + ', .' + name + ', [bind=' + name + '], [name=' + name + ']');
-        if (element.length > 0) {
-          var property = this.seed[name];
-          if (typeof property == 'function') {
-            value = property.apply(this.seed);
-          }
-          else {
-            value = property;
-          }
-
-          if (typeof value != 'object') {
-            Flower.set_value(element, value);
-          }
-        }
-      }
-    }
-
-    element_to_source() {
-      for (var name in this.seed) {
-        var element = this.element.find('#' + name + ':input, .' + name + ':input, [bind=' + name + ']:input');
-        if (element.length > 1) {
-          throw new Error('Too many selectors for property: ' + name + '.');
-        }
-        else if (element.length == 1) {
-          if (typeof this.seed[name] != 'function' && Flower.is_input(element)) {
-            this.seed[name] = element.val();
-          }
-        }
-      }
-    }
+//    source_to_element() {
+//      if (!this.element)
+//        return;
+//
+//      var value;
+//      var self = this;
+//
+//      this.element.find('*[bind]').each(function () {
+//        var element = $(this);
+//        var bind = element.attr('bind');
+//        if (self.hasOwnProperty(bind)) {
+//          if (typeof self[bind] == 'function') {
+//            value = self[bind].apply(self);
+//          }
+//          else {
+//            value = self[bind];
+//          }
+//          Flower.set_value(element, value);
+//        }
+//      });
+//
+//      if (!this.seed)
+//        return;
+//
+//      for (var name in this.seed) {
+//        var element = this.element.find('#' + name + ', .' + name + ', [bind=' + name + '], [name=' + name + ']');
+//        if (element.length > 0) {
+//          var property = this.seed[name];
+//          if (typeof property == 'function') {
+//            value = property.apply(this.seed);
+//          }
+//          else {
+//            value = property;
+//          }
+//
+//          if (typeof value != 'object') {
+//            Flower.set_value(element, value);
+//          }
+//        }
+//      }
+//    }
+//
+//    element_to_source() {
+//      for (var name in this.seed) {
+//        var element = this.element.find('#' + name + ':input, .' + name + ':input, [bind=' + name + ']:input');
+//        if (element.length > 1) {
+//          throw new Error('Too many selectors for property: ' + name + '.');
+//        }
+//        else if (element.length == 1) {
+//          if (typeof this.seed[name] != 'function' && Flower.is_input(element)) {
+//            this.seed[name] = element.val();
+//          }
+//        }
+//      }
+//    }
 
     empty() {
       this.disconnect_all('child');
       this.element.empty();
-    }
-
-    graft_old(selector, other) {
-      var element = this.element.find(selector);
-      this.listen(other, 'change', function (value) {
-        Flower.set_value(element, value);
-      });
-
-      Flower.set_value(element, other.value);
     }
 
     graft(other, property, selector) {
@@ -444,26 +337,30 @@ module Bloom {
     }
   }
 
-  new Block('list', '<ul></ul>');
-
   export class List extends Flower {
     // List did not used to define a default block because blocks used to override
     // existing jQuery elements/selectors passed to the constructer.  Now that that
     // is not the case it is safe to have this default.
-    block = 'list'
     item_type = null
+    item_block:string = null
     pager = null
     empty_on_update = true
     children:Flower[]
     watching
     selection
 
-    constructor(seed, element:JQuery, block) {
-      super(seed, element, block)
-      this.optimize_getter('children', 'child');
-      this.listen(this, 'update', this.on_update);
-      this.listen(this, 'connect.child', this.child_connected);
-      this.listen(this, 'disconnect.child', this.remove_element);
+    constructor(seed, element:JQuery) {
+      super(seed, element)
+      this.optimize_getter('children', 'child')
+      this.listen(this, 'update', this.on_update)
+      this.listen(this, 'connect.child', this.child_connected)
+      this.listen(this, 'disconnect.child', this.remove_element)
+      this.item_type = element.attr('item_type') || this.item_type
+      this.item_block = element.attr('item_block')
+    }
+
+    grow() {
+
       if (typeof this.seed == 'object') {
         // When a seed is a simple array or object, the flower is usually responsible
         // for population, so watching is optional.  When using a Meta_Object,
@@ -476,9 +373,18 @@ module Bloom {
       }
     }
 
-    add_seed_child(seed_item) {
-      var flower:Flower;
-      flower = new this.item_type(seed_item);
+    add_seed_child(seed):Flower {
+      var flower:Flower, element:JQuery, item_type = this.item_type;
+      if (this.item_block) {
+        var block = Flower.render_block(this.item_block, seed)
+        element = Flower.grow(block, seed)
+        if (element.attr('flower')) {
+          var flower_type:any = Flower.find_flower(element.attr('flower'))
+          if (flower_type)
+            item_type = flower_type
+        }
+      }
+      flower = new item_type(seed, element);
       this.connect(flower, 'child', 'parent');
       return flower;
     }
@@ -498,11 +404,6 @@ module Bloom {
       }
     }
 
-    process_connect(other, type, other_type) {
-      if (type == 'child' && this.contains_flower(other))
-        return false;
-    }
-
     on_update(seed) {
       var self = this;
       // Catch it early
@@ -520,21 +421,6 @@ module Bloom {
 
       this.load(seed);
     }
-
-    contains_flower(flower) {
-      return this.element.has(flower.element[0]).length > 0;
-    }
-
-//    make_selectable(selection) {
-//      if (selection == undefined)
-//        this.selection = Meta_Object.create();
-//      else
-//        this.selection = selection;
-//
-//      for (var x = 0; x < this.children.length; x++) {
-//        List.make_item_selectable(this, this.children[x], selection);
-//      }
-//    }
 
     load(seed) {
       seed = seed || this.seed
@@ -895,6 +781,42 @@ module Bloom {
 
     return query;
   }
+
+  export function join(...args:any[]) {
+    var i, tokens = [];
+    for (i = 0; i < args.length; ++i) {
+      var x = args[i];
+      if (typeof x === 'number')
+        x = x.toString();
+      else if (typeof x !== 'string' || x.length === 0)
+        continue;
+
+      x = x.replace(/^\/*/, '')
+      x = x.replace(/\/*$/, '')
+
+      if (x.length === 0)
+        continue;
+
+      tokens.push(x);
+    }
+
+    if (tokens.length === 0)
+      return '';
+
+    // Ensure that query arguments don't have a slash in front of them.
+    // Not essential but leads to cleaner output.
+    if (tokens.length > 1 && tokens[tokens.length - 1][0] == '?') {
+      tokens[tokens.length - 2] += tokens.pop();
+    }
+
+    var result = tokens.join('/')
+
+    if (args[0][0] == '/')
+      result = '/' + result
+
+    return result
+  }
 }
 
-export = Bloom
+export
+= Bloom

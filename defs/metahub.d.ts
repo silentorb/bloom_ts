@@ -1,3 +1,5 @@
+/// <reference path="../defs/when.d.ts" />
+//import when = require('when');
 declare module MetaHub {
     function remove(array, item): void;
     function has_properties(obj): boolean;
@@ -6,7 +8,7 @@ declare module MetaHub {
     function S4(): string;
     function values(source): any[];
     function concat(destination, source): {};
-    function extend(destination, source, names?: string[]);
+    function extend(destination, source, names?);
     function guid(): string;
     function clone(source, names): {};
     function get_connection(a, b);
@@ -23,7 +25,7 @@ declare module MetaHub {
         static invoke_binding(source, owner, name): void;
         public listen(other: Meta_Object, name: string, method: (...args: any[]) => any, options?): void;
         public unlisten(other, name): void;
-        public invoke(name: string, ...args: any[]): void;
+        public invoke(name: string, ...args: any[]);
         public invoke_async(name): void;
         public gather(name);
         public connect(other: Meta_Object, type: string, other_type?: string): void;
@@ -43,4 +45,7 @@ declare module MetaHub {
         constructor(parent, other, type);
     }
 }
-export = MetaHub;
+
+declare module "metahub" {
+  export = MetaHub;
+}
