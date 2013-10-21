@@ -49,6 +49,9 @@ declare module Bloom {
         public watch_seed(child_name, seed?): void;
         static make_item_selectable(list, item, selection): void;
     }
+    class Irrigation {
+        static path_array(path);
+    }
     function get(url, action, error?, wait_parent?: JQuery): void;
     function post(url, seed, success, error, wait_parent): void;
     function post_json(url, seed, success, error): void;

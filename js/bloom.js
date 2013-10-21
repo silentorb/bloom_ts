@@ -57,7 +57,14 @@ define(["require", "exports", 'metahub', 'handlebars'], function(require, export
                         if (blocks[id])
                             console.log('Duplicate block tag name: ' + id + '.');
 
-                        blocks[id] = Handlebars.compile(this.outerHTML);
+                        var block = blocks[id] = {
+                            template: Handlebars.compile(this.outerHTML)
+                        };
+
+                        for (var i = 0; i < this.attributes.length; ++i) {
+                            var attribute = this.attributes[i];
+                            block[attribute.nodeName] = attribute.nodeValue;
+                        }
                     } else {
                         console.log('Error with block tag name');
                     }
@@ -84,9 +91,8 @@ define(["require", "exports", 'metahub', 'handlebars'], function(require, export
                 if (!Flower.blocks[name])
                     throw new Error('Could not find any flower block named: ' + name);
 
-                var template = Flower.blocks[name];
+                var template = Flower.blocks[name].template;
                 var source = template(seed);
-
                 return $(source);
             };
 
@@ -412,6 +418,25 @@ else
             return List;
         })(Flower);
         Bloom.List = List;
+
+        var Irrigation = (function () {
+            function Irrigation() {
+            }
+            Irrigation.path_array = function (path) {
+                if (typeof path == 'object')
+                    return path;
+
+                if (!path || path.length == 0)
+                    return [];
+                if (path[0] == '/')
+                    path = path.substring(1);
+                if (path[path.length - 1] == '/')
+                    path = path.substring(0, path.length - 1);
+                return path.split('/');
+            };
+            return Irrigation;
+        })();
+        Bloom.Irrigation = Irrigation;
 
         function get(url, action, error, wait_parent) {
             if (typeof error === "undefined") { error = null; }

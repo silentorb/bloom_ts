@@ -75,7 +75,21 @@ module Bloom {
           if (blocks[id])
             console.log('Duplicate block tag name: ' + id + '.')
 
-          blocks[id] = Handlebars.compile(this.outerHTML)
+          var block = blocks[id] = {
+            template: Handlebars.compile(this.outerHTML)
+          }
+
+          for (var i = 0; i < this.attributes.length; ++i) {
+            var attribute = this.attributes[i]
+            block[attribute.nodeName] = attribute.nodeValue
+          }
+//          var title =child.attr('title')
+//          if (title)
+//            blocks[id].title = title
+//
+//          var default_child =child.attr('default')
+//          if (default_child)
+//            blocks[id].default_child = default_child
         }
         else {
           console.log('Error with block tag name');
@@ -104,18 +118,8 @@ module Bloom {
       if (!Flower.blocks[name])
         throw new Error('Could not find any flower block named: ' + name)
 
-      var template = Flower.blocks[name]
+      var template = Flower.blocks[name].template
       var source = template(seed)
-//      source = source.replace(/{{([\w\-]+)}}/g, function(match, token) {
-//        if (!seed)
-//          throw new Error('Cannot populate block "' + name + '" with an empty seed.')
-//
-//        if (seed[token] === undefined)
-//          throw new Error('Cannot populate block "' + name + '".  Seed does not have property: ' + token + '.')
-//
-//        return seed[token]
-//      })
-
       return $(source)
     }
 
@@ -521,6 +525,21 @@ module Bloom {
       list.listen(item.seed, 'disconnect.selection', function () {
         item.element.removeClass('selected');
       });
+    }
+  }
+
+  export class Irrigation {
+    static path_array(path) {
+      if (typeof path == 'object')
+        return path;
+
+      if (!path || path.length == 0)
+        return [];
+      if (path[0] == '/')
+        path = path.substring(1);
+      if (path[path.length - 1] == '/')
+        path = path.substring(0, path.length - 1);
+      return path.split('/');
     }
   }
 
