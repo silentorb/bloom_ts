@@ -1,0 +1,3 @@
+declare module "bloom" {
+  export = Bloom
+}

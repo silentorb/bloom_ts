@@ -9,7 +9,7 @@ var __extends = this.__extends || function (d, b) {
     d.prototype = new __();
 };
 define(["require", "exports", 'metahub'], function(require, exports, __MetaHub__) {
-    /// <reference path="metahub.ts" />
+    /// <reference path="../defs/metahub.d.ts" />
     /// <reference path="bloom.ts" />
     var MetaHub = __MetaHub__;
 

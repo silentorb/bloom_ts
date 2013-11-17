@@ -1,6 +1,10 @@
 
-declare module "when" {
+interface Promise {
+  then(...args:any[]):Promise;
+  map(...args:any[]):Promise;
+}
 
+declare module When {
   function defer(): Deferred;
   function map(list, action);
   function all(list);
@@ -9,10 +13,11 @@ declare module "when" {
   export interface Deferred {
     promise: Promise;
     resolve(...args:any[]);
+    reject(reason?);
   }
 
-  export interface Promise {
-    then(...args:any[]):Promise;
-    map(...args:any[]):Promise;
-  }
+}
+
+declare module "when" {
+  export = When
 }

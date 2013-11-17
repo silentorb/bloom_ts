@@ -3,7 +3,7 @@
  * Date: 10/13/13
  */
 
-/// <reference path="metahub.ts" />
+/// <reference path="../defs/metahub.d.ts" />
 /// <reference path="bloom.ts" />
 
 import MetaHub = require('metahub')

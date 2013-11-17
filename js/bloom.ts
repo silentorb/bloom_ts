@@ -7,12 +7,11 @@
 /// <reference path="../defs/jquery.d.ts" />
 /// <reference path="../defs/metahub.d.ts" />
 /// <reference path="../defs/handlebars.d.ts" />
+/// <reference path="../defs/when.d.ts" />
 
-import MetaHub = require
-('metahub')
-
-import Handlebars = require
-('handlebars')
+import MetaHub = require('metahub')
+import Handlebars = require('handlebars')
+import when = require('when')
 
 module Bloom {
   export var output = null
@@ -22,9 +21,9 @@ module Bloom {
   export class Flower extends MetaHub.Meta_Object {
     element:JQuery;
     seed;
-    query;
     static blocks = {}
     static namespace
+    static access_method:(action, target?)=>boolean = null
 
     constructor(seed, element:JQuery) {
       super()
@@ -48,23 +47,10 @@ module Bloom {
       this.element.append(flower.element);
     }
 
-    listen_to_element(event, method) {
-      var self = this;
-
-      this.element.bind(event, function () {
-        method.apply(self, arguments);
-      })
+    query():string {
+      return '';
     }
 
-//    get_data() {
-//      var args = Array.prototype.slice.call(arguments);
-//      var method = args.pop();
-//      jQuery.get(args, function () {
-//        var args = Array.prototype.slice.call(arguments);
-//        args.push('json');
-//        method.apply(this, args);
-//      });
-//    }
     static load_blocks_from_string(text:string) {
       var data = $(text)
       var blocks = Flower.blocks
@@ -83,13 +69,6 @@ module Bloom {
             var attribute = this.attributes[i]
             block[attribute.nodeName] = attribute.nodeValue
           }
-//          var title =child.attr('title')
-//          if (title)
-//            blocks[id].title = title
-//
-//          var default_child =child.attr('default')
-//          if (default_child)
-//            blocks[id].default_child = default_child
         }
         else {
           console.log('Error with block tag name');
@@ -123,36 +102,83 @@ module Bloom {
       return $(source)
     }
 
-    static grow(element:JQuery, seed):JQuery {
-      var block:JQuery, original = element, flower:Flower
+    static grow(element_or_block_name, seed, flower:Flower = null):JQuery {
+      var element:JQuery, block:JQuery, original = element, tagname:string, i
 
-      // Expand blocks
-      var tagname = element[0].tagName.toLowerCase()
-      if (Flower.blocks[tagname]) {
+      if (typeof element_or_block_name === 'string') {
+        tagname = element_or_block_name
+        if (!Flower.blocks[tagname])
+          throw new Error('Could not find block: ' + tagname + '.')
+
         block = Flower.render_block(tagname, seed)
-        element.replaceWith(block)
+
+        // Replace element
         element = block
+      }
+      else {
+        // Expand blocks
+        element = element_or_block_name
+        tagname = element[0].tagName.toLowerCase()
+        if (Flower.blocks[tagname]) {
+          block = Flower.render_block(tagname, seed)
+
+          // Copy attributes
+          for (i = 0; i < element[0].attributes.length; ++i) {
+            var attribute = element[0].attributes[i]
+            block.attr(attribute.nodeName, attribute.nodeValue)
+          }
+
+          element.replaceWith(block)
+          element = block
+        }
+      }
+
+      var bind = element.attr('bind')
+      if (bind) {
+        if (typeof seed[bind] != 'object') {
+          if (seed[bind])
+            Flower.set_value(element, seed[bind])
+
+          Bloom.watch_input(element, ()=> {
+            seed[bind] = Flower.get_value(element)
+          })
+        }
+        else {
+          seed = seed[bind]
+        }
+      }
+
+      if (typeof Flower.access_method === 'function') {
+        var access = element.attr('access')
+        if (access) {
+          if (!Flower.access_method(access, seed)) {
+            element.remove()
+            return $('<span class="access denied"></span>')
+          }
+        }
       }
 
       // Associate code-behind
       if (element.attr('flower')) {
+        console.log('flower', element.attr('flower'))
         var flower_type:any = Flower.find_flower(element.attr('flower'))
         if (flower_type) {
           flower = <Flower>new flower_type(seed, element)
         }
+        else throw new Error('Could not find flower ' + element.attr('flower') + '.')
+      }
+
+      var onclick = element.attr('click')
+      if (flower && onclick && typeof flower[onclick] === 'function') {
+        element.click(function (e) {
+          e.preventDefault()
+          flower[onclick].call(flower, element)
+        })
       }
 
       // Cycle through children
       element.children().each((i, node)=> {
-        var child = $(node)
-        var bind = child.attr('bind')
-        var child_seed
-        if (bind && seed[bind])
-          child_seed = seed[bind]
-        else
-          child_seed = seed
-
-        var child = Flower.grow(child, child_seed)
+        var child = Flower.grow($(node), seed, flower)
         if (block) {
           child.detach()
           element.append(child)
@@ -179,62 +205,6 @@ module Bloom {
       });
     }
 
-//    source_to_element() {
-//      if (!this.element)
-//        return;
-//
-//      var value;
-//      var self = this;
-//
-//      this.element.find('*[bind]').each(function () {
-//        var element = $(this);
-//        var bind = element.attr('bind');
-//        if (self.hasOwnProperty(bind)) {
-//          if (typeof self[bind] == 'function') {
-//            value = self[bind].apply(self);
-//          }
-//          else {
-//            value = self[bind];
-//          }
-//          Flower.set_value(element, value);
-//        }
-//      });
-//
-//      if (!this.seed)
-//        return;
-//
-//      for (var name in this.seed) {
-//        var element = this.element.find('#' + name + ', .' + name + ', [bind=' + name + '], [name=' + name + ']');
-//        if (element.length > 0) {
-//          var property = this.seed[name];
-//          if (typeof property == 'function') {
-//            value = property.apply(this.seed);
-//          }
-//          else {
-//            value = property;
-//          }
-//
-//          if (typeof value != 'object') {
-//            Flower.set_value(element, value);
-//          }
-//        }
-//      }
-//    }
-//
-//    element_to_source() {
-//      for (var name in this.seed) {
-//        var element = this.element.find('#' + name + ':input, .' + name + ':input, [bind=' + name + ']:input');
-//        if (element.length > 1) {
-//          throw new Error('Too many selectors for property: ' + name + '.');
-//        }
-//        else if (element.length == 1) {
-//          if (typeof this.seed[name] != 'function' && Flower.is_input(element)) {
-//            this.seed[name] = element.val();
-//          }
-//        }
-//      }
-//    }
-
     empty() {
       this.disconnect_all('child');
       this.element.empty();
@@ -252,7 +222,7 @@ module Bloom {
       Flower.set_value(element, other[property]);
     }
 
-    update(test) {
+    update(post_data = undefined) {
       var self = this;
       if (this.query == undefined) {
         return;
@@ -275,31 +245,40 @@ module Bloom {
           }
         }, 100);
       }
-      Bloom.get(query, function (response) {
-        finished = true;
-        if (wait) {
-          wait.element.remove();
-        }
-        var seed;
-        if (self.seed_name == null || self.seed_name == '')
-          seed = response;
-        else
-          seed = response[self.seed_name];
+      var settings = {
+        type: 'GET',
+        data: post_data
+      }
 
-        if (seed === undefined) {
-          throw new Error('Could not find valid response data.');
-        }
-        self.invoke('update', seed, response);
-      });
+      if (post_data) {
+        settings.type = 'POST'
+      }
+      jQuery.ajax(query, settings)
+        .then((response)=> {
+          finished = true;
+          if (wait) {
+            wait.element.remove();
+          }
+          var seed;
+          if (this.seed_name == null || this.seed_name == '')
+            seed = response;
+          else
+            seed = response[this.seed_name];
+
+          if (seed === undefined) {
+            throw new Error('Could not find valid response data.');
+          }
+          this.invoke('update', seed, response);
+        })
     }
 
     // Returns a url string to the service from which this object receives its data.
     //    query: function() {},
     // Name of the property of the query response that contains the actual object data.
-    seed_name = 'seed';
+    seed_name = '';
 
 
-    static set_value(elements, value) {
+    static set_value(elements:JQuery, value:any) {
       elements.each(function () {
         var element = $(this);
         if (Flower.is_input(element)) {
@@ -319,7 +298,7 @@ module Bloom {
       });
     }
 
-    static get_value(element) {
+    static get_value(element:JQuery):any {
       if (Flower.is_input(element)) {
         if (element.attr('type') == 'checkbox') {
           return element.prop('checked', true)
@@ -352,15 +331,21 @@ module Bloom {
     children:Flower[]
     watching
     selection
+    list_element:JQuery
 
     constructor(seed, element:JQuery) {
       super(seed, element)
+      this.seed_name = 'objects'
       this.optimize_getter('children', 'child')
       this.listen(this, 'update', this.on_update)
       this.listen(this, 'connect.child', this.child_connected)
       this.listen(this, 'disconnect.child', this.remove_element)
       this.item_type = element.attr('item_type') || this.item_type
       this.item_block = element.attr('item_block')
+      if (element.attr('list'))
+        this.list_element = element.find(element.attr('list'))
+      else
+        this.list_element = element
     }
 
     grow() {
@@ -378,7 +363,7 @@ module Bloom {
     }
 
     add_seed_child(seed):Flower {
-      var flower:Flower, element:JQuery, item_type = this.item_type;
+      var flower:Flower, element:JQuery, item_type = this.item_type || Flower;
       if (this.item_block) {
         var block = Flower.render_block(this.item_block, seed)
         element = Flower.grow(block, seed)
@@ -402,7 +387,7 @@ module Bloom {
         line = jQuery('<li></li>');
         line.append(flower.element);
       }
-      this.element.append(line);
+      this.list_element.append(line);
       if (this.selection) {
         List.make_item_selectable(this, flower, this.selection);
       }
@@ -592,86 +577,50 @@ module Bloom {
     jQuery.ajax(settings);
   }
 
-  export function post(url, seed, success, error, wait_parent) {
-    var wait;
-    if (success === undefined) {
-      success = seed;
-      seed = null;
-    }
+  export function ajax(url:string, settings):Promise {
+    var wait, def = when.defer()
+    var action = settings.success;
+    var success = function (response) {
+//      try {
+//        var json = JSON.parse(response);
+//      }
+//      catch (e) {
+//        console.log('There was a problem parsing the server response in Bloom.get');
+//        console.log(e.message);
+//      }
 
-    if (Bloom.ajax_prefix) {
-      url = Bloom.ajax_prefix + url;
-    }
-
-    var action = function (response) {
-//    if ((response.result && response.result.toLowerCase() == 'success') || response.success) {
-      if (success) {
-        success(response);
-      }
-//    }
-
-      if (typeof Bloom.output == 'function') {
-        Bloom.output(response);
-      }
+      action(response);
     };
-    var settings = {
-      type: 'POST',
+
+    var defaults = {
+      type: 'GET',
       url: url,
-      data: seed,
-      success: action,
-      error: error,
-      complete: function () {
-        if (wait)
-          wait.element.remove();
-      }
-    };
+      dataType: 'json',
+      contentType: 'application/json',
+      complete: undefined
+    }
 
-    if (wait_parent && Bloom.Wait_Animation) {
+    settings = MetaHub.extend(defaults, settings)
+    settings.success = function (response) {
+      def.resolve(response)
+    }
+
+    settings.error = function (response) {
+      def.reject()
+    }
+
+    if (settings.wait_parent && Bloom.Wait_Animation) {
       wait = Bloom.Wait_Animation.create();
-      wait_parent.append(wait.element);
+      settings.wait_parent.append(wait.element);
       settings.complete = function () {
         if (wait)
           wait.element.remove();
       }
     }
 
-    jQuery.ajax(settings);
-  }
+    jQuery.ajax(settings)
 
-  export function post_json(url, seed, success, error) {
-    if (Bloom.ajax_prefix) {
-      url = Bloom.ajax_prefix + url;
-    }
-
-    var action = function (response) {
-      var good = true;
-      // All these checks are for backwards compatibility and are deprecated.
-      if (typeof response.result === 'string' && response.result.toLowerCase() != 'success') {
-        good = false;
-      }
-
-      if (response.success === false) {
-        good = false;
-      }
-      if (good && typeof success === 'function') {
-        success(response);
-      }
-
-      if (typeof Bloom.output == 'function') {
-        Bloom.output(response);
-      }
-    };
-    if (typeof seed == 'object') {
-      seed = JSON.stringify(seed);
-    }
-    jQuery.ajax({
-      type: 'POST',
-      url: url,
-      data: seed,
-      success: action,
-      error: error,
-      contentType: 'application/json'
-    });
+    return def.promise
   }
 
   export function get_url_property(name) {
@@ -745,11 +694,11 @@ module Bloom {
       if (event.keyCode == 8)
         return;
 
-      if (event.keyCode == 13) {
-        event.preventDefault();
-        finished(event);
-        return;
-      }
+//      if (event.keyCode == 13) {
+//        event.preventDefault();
+//        finished(event);
+//        return;
+//      }
 
       if (timer) {
         clearTimeout(timer);
@@ -837,5 +786,4 @@ module Bloom {
   }
 }
 
-export
-= Bloom
+export = Bloom
