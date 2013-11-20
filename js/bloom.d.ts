@@ -3,24 +3,35 @@
 /// <reference path="../defs/handlebars.d.ts" />
 /// <reference path="../defs/when.d.ts" />
 declare module Bloom {
+    interface IBlock {
+        template;
+        query?;
+        name?;
+    }
     var output;
     var ajax_prefix: string;
     var Wait_Animation;
     class Flower extends MetaHub.Meta_Object {
         public element: JQuery;
         public seed;
-        static blocks: {};
+        private static block_tree;
+        static blocks: any[];
         static namespace;
         static access_method: (action: any, target?: any) => boolean;
         constructor(seed, element: JQuery);
         public initialize(): void;
         public append(flower): void;
         public query(): string;
+        static get_wildcard(token);
+        static get_block(path: string): IBlock;
+        static add_block(path: string, block: IBlock): void;
         static load_blocks_from_string(text: string): void;
         static find_flower(path);
         public grow(): void;
-        static render_block(name, seed): JQuery;
-        static grow(element_or_block_name, seed, flower?: Flower): JQuery;
+        static get_url_args(url: string, actual: string): {};
+        static render_block(name, seed, url?: string): Promise;
+        private static get_element_block(element_or_block_name, seed, url?);
+        static grow(element_or_block_name, seed, flower?: Flower, url?: string): Promise;
         public plant(url): void;
         public empty(): void;
         public graft(other, property, selector): void;
@@ -41,7 +52,9 @@ declare module Bloom {
         public list_element: JQuery;
         constructor(seed, element: JQuery);
         public grow(): void;
-        public add_seed_child(seed): Flower;
+        private get_item_type(element);
+        private get_element(seed);
+        public add_seed_child(seed): Promise;
         public child_connected(flower): void;
         public on_update(seed): void;
         public load(seed): void;

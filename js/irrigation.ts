@@ -7,7 +7,7 @@
 /// <reference path="bloom.ts" />
 
 import MetaHub = require('metahub')
-
+/*
 module Bloom {
 
   export interface IRequest {
@@ -379,4 +379,4 @@ module Bloom {
     }
   }
 
-}
+}*/

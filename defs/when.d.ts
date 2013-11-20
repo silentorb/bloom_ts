@@ -8,7 +8,7 @@ declare module When {
   function defer(): Deferred;
   function map(list, action);
   function all(list);
-  function resolve(any?);
+  function resolve(...args:any[]);
 
   export interface Deferred {
     promise: Promise;
