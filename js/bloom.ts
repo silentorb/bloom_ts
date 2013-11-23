@@ -196,7 +196,9 @@ module Bloom {
           })
       }
       var source = template(seed)
-      return when.resolve($(source))
+      var element = $(source)
+      element.data('block', block) // Store a back-reference to the block in the jQuery element
+      return when.resolve(element)
     }
 
     private static get_element_block(element_or_block_name, seed, url:string = null):Promise {

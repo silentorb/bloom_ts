@@ -167,7 +167,9 @@ else
                     });
                 }
                 var source = template(seed);
-                return when.resolve($(source));
+                var element = $(source);
+                element.data('block', block);
+                return when.resolve(element);
             };
 
             Flower.get_element_block = function (element_or_block_name, seed, url) {
