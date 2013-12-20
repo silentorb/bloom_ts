@@ -1,9 +1,3 @@
-/**
- * Created with JetBrains PhpStorm.
- * Author: Christopher W. Johnson
- * Date: 10/9/13
- */
-
 /// <reference path="../defs/jquery.d.ts" />
 /// <reference path="../defs/metahub.d.ts" />
 /// <reference path="../defs/handlebars.d.ts" />
@@ -27,11 +21,245 @@ module Bloom {
   export var ajax_prefix:string
   export var Wait_Animation
 
-  export class Flower extends MetaHub.Meta_Object {
-    element:JQuery;
-    seed;
+  export class Block {
     private static block_tree = {}
     static blocks = []
+
+
+    static get_block(path:string):IBlock {
+      var tokens = path.split('/')
+      var level = Block.block_tree
+      for (var i = 0; i < tokens.length; ++i) {
+        var token = tokens[i]
+        if (level[token]) {
+          level = level[token]
+        }
+        else {
+          level = Flower.get_wildcard(level)
+          if (!level)
+            return null
+        }
+      }
+
+      if (level['self'])
+        return level['self']
+
+      return null
+    }
+
+    static add_block(path:string, block:IBlock) {
+      var tokens = path.split('/')
+      var level = Block.block_tree
+      for (var i = 0; i < tokens.length; ++i) {
+        var token = tokens[i]
+        if (typeof level[token] !== 'object') {
+          level[token] = {}
+        }
+        level = level[token]
+      }
+
+      level['self'] = block
+      Block.blocks.push(block)
+    }
+
+    static load_blocks_from_string(text:string) {
+      var data = $(text)
+      data.children().each(function () {
+        var child = $(this)
+        var id = child.attr('name') || child[0].tagName.toLowerCase()
+        if (id) {
+          var block:IBlock = Block.get_block(id)
+          if (block)
+            console.log('Duplicate block tag name: ' + id + '.')
+
+          block = {
+            template: Handlebars.compile(this.outerHTML)
+          }
+          Block.add_block(id, block)
+
+//          // Check for wildcards.  This currently duplicates
+//          // wildcard entries for easier lookup
+//          var tokens = id.split('/')
+//          if (tokens[tokens.length - 1][0] == ':') {
+////            tokens[tokens.length - 1] = '*'
+//            blocks[tokens.join('/')] = block
+//          }
+
+          for (var i = 0; i < this.attributes.length; ++i) {
+            var attribute = this.attributes[i]
+            block[attribute.nodeName] = attribute.nodeValue
+          }
+        }
+        else {
+          console.log('Error with block tag name');
+        }
+      })
+    }
+
+
+    private static load_block_query(block, seed, url:string):Promise {
+      if (!block)
+        return when.resolve(seed)
+
+      var query_name = block.query || block.name
+      var query = Garden.app.queries[query_name]
+      if (query) {
+        var args = Flower.get_url_args(block.name, url)
+
+        return Garden.app.run_query(query_name, args)
+          .then((response)=> {
+            if (query.is_single)
+              seed = response.objects[0]
+            else
+              seed = response.objects
+
+            return seed
+          })
+      }
+
+      return when.resolve(seed)
+    }
+
+    static render_block(block:IBlock, seed, default_element:JQuery = null):Promise {
+      if (!block)
+        return when.resolve(default_element)
+
+      var template = block.template
+
+      var source = template(seed)
+      var element = $(source)
+      element.data('block', block) // Store a back-reference to the block in the jQuery element
+      return when.resolve(element)
+    }
+
+    static render_block_by_name(name:string, seed):Promise {
+      var block = Block.get_block(name)
+      return Block.render_block(block, seed)
+    }
+
+//    private static get_element_block(block:IBlock, seed):Promise {
+//      if (typeof element_or_block_name === 'string') {
+//        return Flower.render_block(block, seed)
+//      }
+//
+//      return Flower.expand_block_element(block, seed)
+//    }
+
+    private static expand_block_element(old_element:JQuery, new_element:JQuery):JQuery {
+      // Copy attributes
+      for (var i = 0; i < old_element[0].attributes.length; ++i) {
+        var attribute = old_element[0].attributes[i]
+        new_element.attr(attribute.nodeName, attribute.nodeValue)
+      }
+
+      old_element.replaceWith(new_element)
+      return new_element
+    }
+
+    static grow(element_or_block_name, original_seed, flower:Flower = null, url:string = null):Promise {
+      var tagname:string, existing_element:JQuery
+      if (typeof element_or_block_name === 'string') {
+        tagname = element_or_block_name
+      }
+      else {
+        existing_element = element_or_block_name
+        tagname = existing_element.attr('name') || existing_element[0].tagName.toLowerCase()
+      }
+
+      var block = Block.get_block(tagname)
+      if (!block && !existing_element) {
+        if (typeof element_or_block_name === 'string')
+          throw new Error('Could not find block ' + element_or_block_name)
+        else
+          throw new Error('Invalid element to grow.')
+      }
+
+      return Block.load_block_query(block, original_seed, url)
+        .then((seed)=> Block.render_block(block, seed, existing_element)
+          .then((element:JQuery)=> {
+            if (typeof element_or_block_name === 'object')
+              Block.expand_block_element(element_or_block_name, element)
+
+            var bind = element.attr('bind')
+            if (bind) {
+              if (typeof seed[bind] != 'object') {
+                if (seed[bind])
+                  Flower.set_value(element, seed[bind])
+
+                Bloom.watch_input(element, ()=> {
+                  seed[bind] = Flower.get_value(element)
+                })
+              }
+              else {
+                seed = seed[bind]
+              }
+            }
+
+            if (typeof Flower.access_method === 'function') {
+              var access = element.attr('access')
+              if (access) {
+                if (!Flower.access_method(access, seed)) {
+                  element.remove()
+                  return $('<span class="Access denied"></span>')
+                }
+              }
+            }
+
+            // Associate code-behind
+            if (element.attr('flower')) {
+              console.log('flower', element.attr('flower'))
+              var flower_type:any = Flower.find_flower(element.attr('flower'))
+              if (flower_type) {
+                flower = <Flower>new flower_type(seed, element)
+              }
+              else throw new Error('Could not find flower ' + element.attr('flower') + '.')
+            }
+
+            var onclick = element.attr('click')
+            if (flower && onclick && typeof flower[onclick] === 'function') {
+              element.click(function (e) {
+                e.preventDefault()
+                flower[onclick].call(flower, element)
+              })
+            }
+
+            return Block.grow_children(element, seed, flower)
+              .then(()=> element)
+          })
+      )
+    }
+
+    private static grow_children(element:JQuery, seed, flower:Flower):Promise {
+      var promises = []
+      element.children().each((i, node)=> {
+        var child_seed
+        if (MetaHub.is_array(seed))
+          child_seed = seed[i]
+        else
+          child_seed = seed
+
+        promises.push(Block.grow($(node), child_seed, flower)
+          .then((child)=> {
+            if (child.parent()[0] !== element[0]) {
+              child.detach()
+              element.append(child)
+            }
+          }))
+      })
+
+      return when.all(promises).then(()=> {
+        if (flower)
+          flower.grow()
+      })
+    }
+
+  }
+
+  export class Flower extends MetaHub
+    .
+    Meta_Object {
+    element:JQuery;
+    seed;
     static namespace
     static access_method:(action, target?)=>boolean = null
 
@@ -70,76 +298,6 @@ module Bloom {
       return null
     }
 
-    static get_block(path:string):IBlock {
-      var tokens = path.split('/')
-      var level = Flower.block_tree
-      for (var i = 0; i < tokens.length; ++i) {
-        var token = tokens[i]
-        if (level[token]) {
-          level = level[token]
-        }
-        else {
-          level = Flower.get_wildcard(level)
-          if (!level)
-            return null
-        }
-      }
-
-      if (level['self'])
-        return level['self']
-
-      return null
-    }
-
-    static add_block(path:string, block:IBlock) {
-      var tokens = path.split('/')
-      var level = Flower.block_tree
-      for (var i = 0; i < tokens.length; ++i) {
-        var token = tokens[i]
-        if (typeof level[token] !== 'object') {
-          level[token] = {}
-        }
-        level = level[token]
-      }
-
-      level['self'] = block
-      Flower.blocks.push(block)
-    }
-
-    static load_blocks_from_string(text:string) {
-      var data = $(text)
-      data.children().each(function () {
-        var child = $(this)
-        var id = child.attr('name') || child[0].tagName.toLowerCase()
-        if (id) {
-          var block:IBlock = Flower.get_block(id)
-          if (block)
-            console.log('Duplicate block tag name: ' + id + '.')
-
-          block = {
-            template: Handlebars.compile(this.outerHTML)
-          }
-          Flower.add_block(id, block)
-
-//          // Check for wildcards.  This currently duplicates
-//          // wildcard entries for easier lookup
-//          var tokens = id.split('/')
-//          if (tokens[tokens.length - 1][0] == ':') {
-////            tokens[tokens.length - 1] = '*'
-//            blocks[tokens.join('/')] = block
-//          }
-
-          for (var i = 0; i < this.attributes.length; ++i) {
-            var attribute = this.attributes[i]
-            block[attribute.nodeName] = attribute.nodeValue
-          }
-        }
-        else {
-          console.log('Error with block tag name');
-        }
-      })
-    }
-
     static find_flower(path) {
       var tokens = path.split('.')
       var result = Flower.namespace
@@ -171,136 +329,6 @@ module Bloom {
       }
 
       return result
-    }
-
-    static render_block(name, seed, url:string = null):Promise {
-      var block:IBlock = Flower.get_block(name)
-      if (!block)
-        throw new Error('Could not find any flower block named: ' + name)
-
-      var template = block.template
-      var query_name = block.query || block.name
-      var query = Garden.app.queries[query_name]
-      if (query) {
-        var args = Flower.get_url_args(block.name, url)
-
-        return Garden.app.run_query(query_name, args)
-          .then((response)=> {
-            if (query.is_single)
-              seed = response.objects[0]
-            else
-              seed = response.objects
-
-            var source = template(seed)
-            return $(source)
-          })
-      }
-      var source = template(seed)
-      var element = $(source)
-      element.data('block', block) // Store a back-reference to the block in the jQuery element
-      return when.resolve(element)
-    }
-
-    private static get_element_block(element_or_block_name, seed, url:string = null):Promise {
-      var tagname:string, element:JQuery, block:JQuery
-      if (typeof element_or_block_name === 'string') {
-        tagname = element_or_block_name
-        if (!Flower.get_block(tagname))
-          throw new Error('Could not find block: ' + tagname + '.')
-
-        return Flower.render_block(tagname, seed, url)
-          .then((element)=> when.resolve(element, element))
-
-//        // Replace element
-//        element = block
-      }
-      // Expand blocks
-      element = element_or_block_name
-      tagname = element[0].tagName.toLowerCase()
-      if (Flower.get_block(tagname)) {
-        return Flower.render_block(tagname, seed, url)
-          .then((block)=> {
-
-            // Copy attributes
-            for (var i = 0; i < element[0].attributes.length; ++i) {
-              var attribute = element[0].attributes[i]
-              block.attr(attribute.nodeName, attribute.nodeValue)
-            }
-
-            element.replaceWith(block)
-            return when.resolve(block, block)
-          })
-      }
-      else {
-        return when.resolve(element, null)
-      }
-    }
-
-    static grow(element_or_block_name, seed, flower:Flower = null, url:string = null):Promise {
-      return Flower.get_element_block(element_or_block_name, seed, url)
-        .then((element:JQuery, block:JQuery)=> {
-          var bind = element.attr('bind')
-          if (bind) {
-            if (typeof seed[bind] != 'object') {
-              if (seed[bind])
-                Flower.set_value(element, seed[bind])
-
-              Bloom.watch_input(element, ()=> {
-                seed[bind] = Flower.get_value(element)
-              })
-            }
-            else {
-              seed = seed[bind]
-            }
-          }
-
-          if (typeof Flower.access_method === 'function') {
-            var access = element.attr('access')
-            if (access) {
-              if (!Flower.access_method(access, seed)) {
-                element.remove()
-                return $('<span class="access denied"></span>')
-              }
-            }
-          }
-
-          // Associate code-behind
-          if (element.attr('flower')) {
-            console.log('flower', element.attr('flower'))
-            var flower_type:any = Flower.find_flower(element.attr('flower'))
-            if (flower_type) {
-              flower = <Flower>new flower_type(seed, element)
-            }
-            else throw new Error('Could not find flower ' + element.attr('flower') + '.')
-          }
-
-          var onclick = element.attr('click')
-          if (flower && onclick && typeof flower[onclick] === 'function') {
-            element.click(function (e) {
-              e.preventDefault()
-              flower[onclick].call(flower, element)
-            })
-          }
-
-          var child_promises = []
-          // Cycle through children
-          element.children().each((i, node)=> {
-            child_promises.push(Flower.grow($(node), seed, flower)
-              .then((child)=> {
-                if (block) {
-                  child.detach()
-                  element.append(child)
-                }
-              }))
-          })
-
-          when.all(child_promises).then(()=> {
-            if (flower)
-              flower.grow()
-          })
-
-          return element
-        })
     }
 
     plant(url) {
@@ -487,8 +515,8 @@ module Bloom {
 
     private get_element(seed):Promise {
       if (this.item_block) {
-        return Flower.render_block(this.item_block, seed)
-          .then((block)=> Flower.grow(block, seed))
+        return Block.render_block_by_name(this.item_block, seed)
+          .then((block)=> Block.grow(block, seed))
       }
 
       return when.resolve()

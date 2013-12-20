@@ -15,6 +15,219 @@ define(["require", "exports", 'metahub', 'handlebars', 'when'], function(require
         Bloom.ajax_prefix;
         Bloom.Wait_Animation;
 
+        var Block = (function () {
+            function Block() {
+            }
+            Block.get_block = function (path) {
+                var tokens = path.split('/');
+                var level = Block.block_tree;
+                for (var i = 0; i < tokens.length; ++i) {
+                    var token = tokens[i];
+                    if (level[token]) {
+                        level = level[token];
+                    } else {
+                        level = Flower.get_wildcard(level);
+                        if (!level)
+                            return null;
+                    }
+                }
+
+                if (level['self'])
+                    return level['self'];
+
+                return null;
+            };
+
+            Block.add_block = function (path, block) {
+                var tokens = path.split('/');
+                var level = Block.block_tree;
+                for (var i = 0; i < tokens.length; ++i) {
+                    var token = tokens[i];
+                    if (typeof level[token] !== 'object') {
+                        level[token] = {};
+                    }
+                    level = level[token];
+                }
+
+                level['self'] = block;
+                Block.blocks.push(block);
+            };
+
+            Block.load_blocks_from_string = function (text) {
+                var data = $(text);
+                data.children().each(function () {
+                    var child = $(this);
+                    var id = child.attr('name') || child[0].tagName.toLowerCase();
+                    if (id) {
+                        var block = Block.get_block(id);
+                        if (block)
+                            console.log('Duplicate block tag name: ' + id + '.');
+
+                        block = {
+                            template: Handlebars.compile(this.outerHTML)
+                        };
+                        Block.add_block(id, block);
+
+                        for (var i = 0; i < this.attributes.length; ++i) {
+                            var attribute = this.attributes[i];
+                            block[attribute.nodeName] = attribute.nodeValue;
+                        }
+                    } else {
+                        console.log('Error with block tag name');
+                    }
+                });
+            };
+
+            Block.load_block_query = function (block, seed, url) {
+                if (!block)
+                    return when.resolve(seed);
+
+                var query_name = block.query || block.name;
+                var query = Garden.app.queries[query_name];
+                if (query) {
+                    var args = Flower.get_url_args(block.name, url);
+
+                    return Garden.app.run_query(query_name, args).then(function (response) {
+                        if (query.is_single)
+                            seed = response.objects[0];
+else
+                            seed = response.objects;
+
+                        return seed;
+                    });
+                }
+
+                return when.resolve(seed);
+            };
+
+            Block.render_block = function (block, seed, default_element) {
+                if (typeof default_element === "undefined") { default_element = null; }
+                if (!block)
+                    return when.resolve(default_element);
+
+                var template = block.template;
+
+                var source = template(seed);
+                var element = $(source);
+                element.data('block', block);
+                return when.resolve(element);
+            };
+
+            Block.render_block_by_name = function (name, seed) {
+                var block = Block.get_block(name);
+                return Block.render_block(block, seed);
+            };
+
+            Block.expand_block_element = function (old_element, new_element) {
+                for (var i = 0; i < old_element[0].attributes.length; ++i) {
+                    var attribute = old_element[0].attributes[i];
+                    new_element.attr(attribute.nodeName, attribute.nodeValue);
+                }
+
+                old_element.replaceWith(new_element);
+                return new_element;
+            };
+
+            Block.grow = function (element_or_block_name, original_seed, flower, url) {
+                if (typeof flower === "undefined") { flower = null; }
+                if (typeof url === "undefined") { url = null; }
+                var tagname, existing_element;
+                if (typeof element_or_block_name === 'string') {
+                    tagname = element_or_block_name;
+                } else {
+                    existing_element = element_or_block_name;
+                    tagname = existing_element.attr('name') || existing_element[0].tagName.toLowerCase();
+                }
+
+                var block = Block.get_block(tagname);
+                if (!block && !existing_element) {
+                    if (typeof element_or_block_name === 'string')
+                        throw new Error('Could not find block ' + element_or_block_name);
+else
+                        throw new Error('Invalid element to grow.');
+                }
+
+                return Block.load_block_query(block, original_seed, url).then(function (seed) {
+                    return Block.render_block(block, seed, existing_element).then(function (element) {
+                        if (typeof element_or_block_name === 'object')
+                            Block.expand_block_element(element_or_block_name, element);
+
+                        var bind = element.attr('bind');
+                        if (bind) {
+                            if (typeof seed[bind] != 'object') {
+                                if (seed[bind])
+                                    Flower.set_value(element, seed[bind]);
+
+                                Bloom.watch_input(element, function () {
+                                    seed[bind] = Flower.get_value(element);
+                                });
+                            } else {
+                                seed = seed[bind];
+                            }
+                        }
+
+                        if (typeof Flower.access_method === 'function') {
+                            var access = element.attr('access');
+                            if (access) {
+                                if (!Flower.access_method(access, seed)) {
+                                    element.remove();
+                                    return $('<span class="Access denied"></span>');
+                                }
+                            }
+                        }
+
+                        if (element.attr('flower')) {
+                            console.log('flower', element.attr('flower'));
+                            var flower_type = Flower.find_flower(element.attr('flower'));
+                            if (flower_type) {
+                                flower = new flower_type(seed, element);
+                            } else
+                                throw new Error('Could not find flower ' + element.attr('flower') + '.');
+                        }
+
+                        var onclick = element.attr('click');
+                        if (flower && onclick && typeof flower[onclick] === 'function') {
+                            element.click(function (e) {
+                                e.preventDefault();
+                                flower[onclick].call(flower, element);
+                            });
+                        }
+
+                        return Block.grow_children(element, seed, flower).then(function () {
+                            return element;
+                        });
+                    });
+                });
+            };
+
+            Block.grow_children = function (element, seed, flower) {
+                var promises = [];
+                element.children().each(function (i, node) {
+                    var child_seed;
+                    if (MetaHub.is_array(seed))
+                        child_seed = seed[i];
+else
+                        child_seed = seed;
+
+                    promises.push(Block.grow($(node), child_seed, flower).then(function (child) {
+                        if (child.parent()[0] !== element[0]) {
+                            child.detach();
+                            element.append(child);
+                        }
+                    }));
+                });
+
+                return when.all(promises).then(function () {
+                    if (flower)
+                        flower.grow();
+                });
+            };
+            Block.block_tree = {};
+            Block.blocks = [];
+            return Block;
+        })();
+        Bloom.Block = Block;
+
         var Flower = (function (_super) {
             __extends(Flower, _super);
             function Flower(seed, element) {
@@ -52,66 +265,6 @@ define(["require", "exports", 'metahub', 'handlebars', 'when'], function(require
                 return null;
             };
 
-            Flower.get_block = function (path) {
-                var tokens = path.split('/');
-                var level = Flower.block_tree;
-                for (var i = 0; i < tokens.length; ++i) {
-                    var token = tokens[i];
-                    if (level[token]) {
-                        level = level[token];
-                    } else {
-                        level = Flower.get_wildcard(level);
-                        if (!level)
-                            return null;
-                    }
-                }
-
-                if (level['self'])
-                    return level['self'];
-
-                return null;
-            };
-
-            Flower.add_block = function (path, block) {
-                var tokens = path.split('/');
-                var level = Flower.block_tree;
-                for (var i = 0; i < tokens.length; ++i) {
-                    var token = tokens[i];
-                    if (typeof level[token] !== 'object') {
-                        level[token] = {};
-                    }
-                    level = level[token];
-                }
-
-                level['self'] = block;
-                Flower.blocks.push(block);
-            };
-
-            Flower.load_blocks_from_string = function (text) {
-                var data = $(text);
-                data.children().each(function () {
-                    var child = $(this);
-                    var id = child.attr('name') || child[0].tagName.toLowerCase();
-                    if (id) {
-                        var block = Flower.get_block(id);
-                        if (block)
-                            console.log('Duplicate block tag name: ' + id + '.');
-
-                        block = {
-                            template: Handlebars.compile(this.outerHTML)
-                        };
-                        Flower.add_block(id, block);
-
-                        for (var i = 0; i < this.attributes.length; ++i) {
-                            var attribute = this.attributes[i];
-                            block[attribute.nodeName] = attribute.nodeValue;
-                        }
-                    } else {
-                        console.log('Error with block tag name');
-                    }
-                });
-            };
-
             Flower.find_flower = function (path) {
                 var tokens = path.split('.');
                 var result = Flower.namespace;
@@ -142,129 +295,6 @@ define(["require", "exports", 'metahub', 'handlebars', 'when'], function(require
                 }
 
                 return result;
-            };
-
-            Flower.render_block = function (name, seed, url) {
-                if (typeof url === "undefined") { url = null; }
-                var block = Flower.get_block(name);
-                if (!block)
-                    throw new Error('Could not find any flower block named: ' + name);
-
-                var template = block.template;
-                var query_name = block.query || block.name;
-                var query = Garden.app.queries[query_name];
-                if (query) {
-                    var args = Flower.get_url_args(block.name, url);
-
-                    return Garden.app.run_query(query_name, args).then(function (response) {
-                        if (query.is_single)
-                            seed = response.objects[0];
-else
-                            seed = response.objects;
-
-                        var source = template(seed);
-                        return $(source);
-                    });
-                }
-                var source = template(seed);
-                var element = $(source);
-                element.data('block', block);
-                return when.resolve(element);
-            };
-
-            Flower.get_element_block = function (element_or_block_name, seed, url) {
-                if (typeof url === "undefined") { url = null; }
-                var tagname, element, block;
-                if (typeof element_or_block_name === 'string') {
-                    tagname = element_or_block_name;
-                    if (!Flower.get_block(tagname))
-                        throw new Error('Could not find block: ' + tagname + '.');
-
-                    return Flower.render_block(tagname, seed, url).then(function (element) {
-                        return when.resolve(element, element);
-                    });
-                }
-
-                element = element_or_block_name;
-                tagname = element[0].tagName.toLowerCase();
-                if (Flower.get_block(tagname)) {
-                    return Flower.render_block(tagname, seed, url).then(function (block) {
-                        for (var i = 0; i < element[0].attributes.length; ++i) {
-                            var attribute = element[0].attributes[i];
-                            block.attr(attribute.nodeName, attribute.nodeValue);
-                        }
-
-                        element.replaceWith(block);
-                        return when.resolve(block, block);
-                    });
-                } else {
-                    return when.resolve(element, null);
-                }
-            };
-
-            Flower.grow = function (element_or_block_name, seed, flower, url) {
-                if (typeof flower === "undefined") { flower = null; }
-                if (typeof url === "undefined") { url = null; }
-                return Flower.get_element_block(element_or_block_name, seed, url).then(function (element, block) {
-                    var bind = element.attr('bind');
-                    if (bind) {
-                        if (typeof seed[bind] != 'object') {
-                            if (seed[bind])
-                                Flower.set_value(element, seed[bind]);
-
-                            Bloom.watch_input(element, function () {
-                                seed[bind] = Flower.get_value(element);
-                            });
-                        } else {
-                            seed = seed[bind];
-                        }
-                    }
-
-                    if (typeof Flower.access_method === 'function') {
-                        var access = element.attr('access');
-                        if (access) {
-                            if (!Flower.access_method(access, seed)) {
-                                element.remove();
-                                return $('<span class="access denied"></span>');
-                            }
-                        }
-                    }
-
-                    if (element.attr('flower')) {
-                        console.log('flower', element.attr('flower'));
-                        var flower_type = Flower.find_flower(element.attr('flower'));
-                        if (flower_type) {
-                            flower = new flower_type(seed, element);
-                        } else
-                            throw new Error('Could not find flower ' + element.attr('flower') + '.');
-                    }
-
-                    var onclick = element.attr('click');
-                    if (flower && onclick && typeof flower[onclick] === 'function') {
-                        element.click(function (e) {
-                            e.preventDefault();
-                            flower[onclick].call(flower, element);
-                        });
-                    }
-
-                    var child_promises = [];
-
-                    element.children().each(function (i, node) {
-                        child_promises.push(Flower.grow($(node), seed, flower).then(function (child) {
-                            if (block) {
-                                child.detach();
-                                element.append(child);
-                            }
-                        }));
-                    });
-
-                    when.all(child_promises).then(function () {
-                        if (flower)
-                            flower.grow();
-                    });
-
-                    return element;
-                });
             };
 
             Flower.prototype.plant = function (url) {
@@ -384,9 +414,6 @@ else
                 var name = element[0].nodeName.toLowerCase();
                 return name == 'input' || name == 'select' || name == 'textarea';
             };
-            Flower.block_tree = {};
-            Flower.blocks = [];
-
             Flower.access_method = null;
             return Flower;
         })(MetaHub.Meta_Object);
@@ -434,8 +461,8 @@ else
 
             List.prototype.get_element = function (seed) {
                 if (this.item_block) {
-                    return Flower.render_block(this.item_block, seed).then(function (block) {
-                        return Flower.grow(block, seed);
+                    return Block.render_block_by_name(this.item_block, seed).then(function (block) {
+                        return Block.grow(block, seed);
                     });
                 }
 

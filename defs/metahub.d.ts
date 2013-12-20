@@ -1,4 +1,4 @@
-/// <reference path="../defs/when.d.ts" />
+/// <reference path="when.d.ts" />
 //import when = require('when');
 declare module MetaHub {
     function remove(array, item): void;

@@ -11,11 +11,22 @@ declare module Bloom {
     var output;
     var ajax_prefix: string;
     var Wait_Animation;
+    class Block {
+        private static block_tree;
+        static blocks: any[];
+        static get_block(path: string): IBlock;
+        static add_block(path: string, block: IBlock): void;
+        static load_blocks_from_string(text: string): void;
+        private static load_block_query(block, seed, url);
+        static render_block(block: IBlock, seed, default_element?: JQuery): Promise;
+        static render_block_by_name(name: string, seed): Promise;
+        private static expand_block_element(old_element, new_element);
+        static grow(element_or_block_name, original_seed, flower?: Flower, url?: string): Promise;
+        private static grow_children(element, seed, flower);
+    }
     class Flower extends MetaHub.Meta_Object {
         public element: JQuery;
         public seed;
-        private static block_tree;
-        static blocks: any[];
         static namespace;
         static access_method: (action: any, target?: any) => boolean;
         constructor(seed, element: JQuery);
@@ -23,15 +34,9 @@ declare module Bloom {
         public append(flower): void;
         public query(): string;
         static get_wildcard(token);
-        static get_block(path: string): IBlock;
-        static add_block(path: string, block: IBlock): void;
-        static load_blocks_from_string(text: string): void;
         static find_flower(path);
         public grow(): void;
         static get_url_args(url: string, actual: string): {};
-        static render_block(name, seed, url?: string): Promise;
-        private static get_element_block(element_or_block_name, seed, url?);
-        static grow(element_or_block_name, seed, flower?: Flower, url?: string): Promise;
         public plant(url): void;
         public empty(): void;
         public graft(other, property, selector): void;
