@@ -12,6 +12,21 @@ declare module Bloom {
     var ajax_prefix: string;
     var Wait_Animation;
     class Block {
+        static handlebars: {
+            registerHelper(name: string, fn: Function, inverse?: boolean): void;
+            registerPartial(name: string, str: any): void;
+            K(): void;
+            createFrame(object: any): any;
+            Exception(message: string): void;
+            SafeString: {
+                toString(): string;
+                new(str: string): Handlebars.SafeString;
+            };
+            parse(input: string): boolean;
+            logger: Handlebars.Logger;
+            log(level: number, obj: any): void;
+            compile(input: any, options?: any): (context: any, options?: any) => string;
+        };
         private static block_tree;
         static blocks: any[];
         static get_block(path: string): IBlock;

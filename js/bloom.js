@@ -222,6 +222,7 @@ else
                         flower.grow();
                 });
             };
+            Block.handlebars = Handlebars;
             Block.block_tree = {};
             Block.blocks = [];
             return Block;

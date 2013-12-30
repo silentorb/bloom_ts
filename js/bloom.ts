@@ -22,6 +22,7 @@ module Bloom {
   export var Wait_Animation
 
   export class Block {
+    static handlebars = Handlebars
     private static block_tree = {}
     static blocks = []
 
