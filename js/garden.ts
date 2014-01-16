@@ -168,8 +168,12 @@ module Garden {
           this.get_plot('root').append(garden)
           var self = this
           garden.on('click', 'a', function (e) {
-            e.preventDefault()
             var url = $(this).attr('href')
+            if (!url || url == '#')
+              return
+
+            e.preventDefault()
+
             // Someday I may come across an exception, but every case I can think of,
             // external links will always have a dot and local links never will.
             if (url.indexOf('.') > -1) {

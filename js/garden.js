@@ -170,8 +170,11 @@ else
                     _this.get_plot('root').append(garden);
                     var self = _this;
                     garden.on('click', 'a', function (e) {
-                        e.preventDefault();
                         var url = $(this).attr('href');
+                        if (!url || url == '#')
+                            return;
+
+                        e.preventDefault();
 
                         if (url.indexOf('.') > -1) {
                             var win = window.open(url, '_blank');
